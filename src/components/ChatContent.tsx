@@ -72,7 +72,7 @@ function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps)
             text={message.txt} // Using 'txt' field
             timeStamp={message.ts.toMillis()} // Convert timestamp to milliseconds
             from={message.from}
-            own={message.from === currentUser?.wallet}  // Compare with wallet instead of id
+            own={message.from === currentUser?.id}  // Compare with wallet instead of id
           />
         );
       })}
