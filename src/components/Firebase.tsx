@@ -3,13 +3,14 @@ import { getAnalytics } from "firebase/analytics";
 import { getFirestore } from "firebase/firestore";  // Import Firestore
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBRDBbrJbmLwb3YTI_YBmMdTjLEd8KjS2E",
-  authDomain: "tokenchat-b8673.firebaseapp.com",
-  projectId: "tokenchat-b8673",  // Firestore doesn't need databaseURL
-  storageBucket: "tokenchat-b8673.appspot.com",
-  messagingSenderId: "593980787293",
-  appId: "1:593980787293:web:7c58ff7656a3fa31b19bb4",
-  measurementId: "G-RB9WJLVQC0"
+  apiKey: import.meta.env.VITE_FIREBASE_APIKEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTHDOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECTID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGEBUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APPID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENTID,
+  // .env gitignored
 };
 
 const app = initializeApp(firebaseConfig);
