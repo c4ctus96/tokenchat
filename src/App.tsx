@@ -14,9 +14,8 @@ import Chat from "./components/Chat";
 import { UserProvider, useUser } from "./components/UserContext";
 
 const queryClient = new QueryClient();
-const projectId = '02ee764d5cc25cff6387d6d3f7943fd6';
+const projectId = import.meta.env.VITE_WAGMI_PROJECTID; // .env is gitignored
 if (!projectId) throw new Error("Project ID is undefined");
-
 
 const metadata = {
   name: "Web3Modal",
