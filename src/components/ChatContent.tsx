@@ -57,7 +57,7 @@ function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps)
     <div className="chatContent">
       {[...messages].reverse().map((message, index) => {
         console.log(
-          "user id from the priveder:",
+          "user address from the provider:",
           address,
           "message from id:",
           message.from,
