@@ -74,7 +74,6 @@ xXx_gorno_xXx постасил(а) отметку "нравится" на Ваш
 
 */
 
-
 const metadata = {
   name: "Web3Modal",
   description: "Web3Modal Example",
