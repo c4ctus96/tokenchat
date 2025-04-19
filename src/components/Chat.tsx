@@ -7,6 +7,7 @@ import ChatWindow from "./ChatWindow";
 import ChatContent from "./ChatContent";
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from "./Firebase";
+import { useUser } from "./UserContext";
 
 interface User {
   id: string;
@@ -18,6 +19,7 @@ function Chat() {
   const { address } = useAccount(); // Get the current user's wallet address
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const { setCurrentUser } = useUser(); // Get the setCurrentUser function from context
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -33,6 +35,15 @@ function Chat() {
     fetchUsers();
   }, []);
 
+  // Update currentUser in context whenever users or address changes
+  useEffect(() => {
+    if (users.length > 0 && address) {
+      const currentUser = users.find(user => user.wallet === address);
+      console.log("Current User:", currentUser);
+      setCurrentUser(currentUser);
+    }
+  }, [users, address, setCurrentUser]);
+
   // Handler for selecting a chat room
   const handleChatSelect = (chatId: string) => {
     setSelectedChatId(chatId);
@@ -43,11 +54,6 @@ function Chat() {
     const user = users.find((user) => user.id === id);
     return user ? user.wallet : "";
   };
-
-  // NEW: Determine the current user logged in by matching the wallet address
-  const currentUser = users.find(user => user.wallet === address);
-
-  console.log("Current User:", currentUser); // For debugging and verification
 
   return (
     <div className="chat">

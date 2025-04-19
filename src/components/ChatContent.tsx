@@ -56,6 +56,9 @@ function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps)
   return (
     <div className="chatContent">
       {[...messages].reverse().map((message, index) => {
+        // Safely check for currentUser first
+        const isOwnMessage = currentUser?.id ? message.from === currentUser.id : false;
+        
         console.log(
           "user address from the provider:",
           address,
@@ -66,15 +69,16 @@ function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps)
           "current user wallet:",
           currentUser?.wallet,
           "ownership:",
-          message.from === currentUser?.id  // Changed comparison here
+          isOwnMessage
         );
+        
         return (
           <Message
             key={index}
             text={message.txt} // Using 'txt' field
             timeStamp={message.ts.toMillis()} // Convert timestamp to milliseconds
             from={message.from}
-            own={message.from === currentUser?.id}  // Compare with wallet instead of id
+            own={isOwnMessage}  // Use the safely calculated value
           />
         );
       })}
