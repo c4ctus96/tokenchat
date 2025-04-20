@@ -116,7 +116,7 @@ function HomePage() {
             <h3>Connected {connector?.id ? `(${connector.id})` : ""}</h3>
             <w3m-account-button balance="hide" />
             <ProceedButton />
-            <button onClick={handleDisconnect} className="disconnect-button">Disconnect</button>
+            {/*<button onClick={handleDisconnect} className="disconnect-button">Disconnect</button>*/}
           </div>
         ) : (
           <div className="login">
@@ -129,4 +129,4 @@ function HomePage() {
   );
 }
 
-export default HomePage;
+export default HomePage; 
