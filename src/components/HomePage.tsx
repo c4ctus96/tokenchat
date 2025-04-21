@@ -4,6 +4,7 @@ import "../styles.css";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useNavigate } from "react-router-dom";
 import ProceedButton from "./ProceedButton";
+import WalletMenu from "./WalletMenu";
 
 // Define type for custom web3modal elements
 declare global {
@@ -111,19 +112,15 @@ function HomePage() {
         <h2>Your personal web3 companion.</h2>
       </div>
       <div>
-        {connected ? (
-          <div className="login">
-            <h3>Connected {connector?.id ? `(${connector.id})` : ""}</h3>
-            <w3m-account-button balance="hide" />
-            <ProceedButton />
-            {/*<button onClick={handleDisconnect} className="disconnect-button">Disconnect</button>*/}
-          </div>
-        ) : (
-          <div className="login">
-            <h3>Connect your wallet</h3>
-            <ConnectButton />
-          </div>
-        )}
+        <div className="login">
+          <h3>
+            {connected 
+              ? `Connected ${connector?.id ? `(${connector.id})` : ""}` 
+              : "Connect your wallet"}
+          </h3>
+          <WalletMenu />
+          {connected && <ProceedButton />}
+        </div>
       </div>
     </div>
   );
