@@ -1,15 +1,18 @@
 import React from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { firestore } from "./Firebase";
+import { useUser } from "./UserContext";
 
+interface ChatBottomBarProps {
+  selectedChatId?: string;
+}
 
-// Updated SendMessage: correct collection name, field names, and error handling
-const SendMessage = async (txt: string, from: string) => {
+const SendMessage = async (txt: string, from: string, chatId: string) => {
   try {
     const chatMessagesCollectionRef = collection(
       firestore,
       "privateChats",
-      "hLzFtbmaVBgQ5k9SQUCV",
+      chatId,
       "msg"
     );
     await addDoc(chatMessagesCollectionRef, {
@@ -23,10 +26,22 @@ const SendMessage = async (txt: string, from: string) => {
   }
 };
 
-const ChatBottomBar: React.FC = () => {
+const ChatBottomBar: React.FC<ChatBottomBarProps> = ({ selectedChatId }) => {
   const [inputValue, setInputValue] = React.useState("");
+  const { currentUser } = useUser();
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInputValue(e.target.value);
+  };
+
+  const handleSend = () => {
+    if (!selectedChatId || !currentUser || !inputValue.trim()) {
+      console.error("Missing required data:", { selectedChatId, currentUser, inputValue });
+      return;
+    }
+    
+    SendMessage(inputValue, currentUser.id, selectedChatId);
+    setInputValue(""); // Clear input after sending
   };
 
   return (
@@ -40,7 +55,8 @@ const ChatBottomBar: React.FC = () => {
       />
       <button
         className="sendMessageButton"
-        onClick={() => SendMessage("message sent from a hardcoded function", "lv5U8K94q8WQAA1gtjES")}
+        onClick={handleSend}
+        disabled={!selectedChatId || !currentUser}
       >
         Send
       </button>

@@ -4,13 +4,14 @@ import ChatBottomBar from "./ChatBottomBar";
 
 interface ChatWindowProps {
   children?: ReactNode; // Allow ChatWindow to accept children
+  selectedChatId?: string; // Add this prop
 }
 
-function ChatWindow({ children }: ChatWindowProps) {
+function ChatWindow({ children, selectedChatId }: ChatWindowProps) {
   return (
     <div className="chatWindow">
       <div className="chatContent">{children}</div> {/* Render children here */}
-      <ChatBottomBar />
+      <ChatBottomBar selectedChatId={selectedChatId} />
     </div>
   );
 }
