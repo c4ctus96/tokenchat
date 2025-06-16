@@ -63,7 +63,7 @@ function Chat() {
         users={users}
         getWalletById={getWalletById}
       />
-      <ChatWindow>
+      <ChatWindow selectedChatId={selectedChatId || undefined}>
         {selectedChatId && (
           <ChatContent
             selectedChatId={selectedChatId}
