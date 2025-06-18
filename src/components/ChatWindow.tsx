@@ -1,22 +1,17 @@
 import React, { ReactNode } from "react";
 import "../styles.css";
+import ChatBottomBar from "./ChatBottomBar";
 
 interface ChatWindowProps {
   children?: ReactNode; // Allow ChatWindow to accept children
+  selectedChatId?: string; // Add this prop
 }
 
-function ChatWindow({ children }: ChatWindowProps) {
+function ChatWindow({ children, selectedChatId }: ChatWindowProps) {
   return (
     <div className="chatWindow">
       <div className="chatContent">{children}</div> {/* Render children here */}
-      <div className="chatBottomBar">
-        <input
-          type="text"
-          className="messageInput"
-          placeholder="Type your message"
-        />
-        <button className="sendMessageButton">Send</button>
-      </div>
+      <ChatBottomBar selectedChatId={selectedChatId} />
     </div>
   );
 }
