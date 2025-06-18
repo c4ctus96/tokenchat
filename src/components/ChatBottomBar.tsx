@@ -2,6 +2,7 @@ import React from "react";
 import { collection, addDoc } from "firebase/firestore";
 import { firestore } from "./Firebase";
 import { useUser } from "./UserContext";
+import { IoSend } from "react-icons/io5";
 
 interface ChatBottomBarProps {
   selectedChatId?: string;
@@ -57,8 +58,9 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({ selectedChatId }) => {
         className="sendMessageButton"
         onClick={handleSend}
         disabled={!selectedChatId || !currentUser}
+        title="Send message"
       >
-        Send
+        <IoSend size={20} />
       </button>
     </div>
   );

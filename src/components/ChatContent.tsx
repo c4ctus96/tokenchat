@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { firestore } from "./Firebase";
 import { collection, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import Message from "./Message";
@@ -27,6 +27,17 @@ function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps)
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { address } = useAccount();
   const { currentUser } = useUser();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom function
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  // Scroll whenever messages update
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     if (!selectedChatId) return;
@@ -71,6 +82,7 @@ function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps)
           />
         );
       })}
+      <div ref={messagesEndRef} /> {/* Invisible element to scroll to */}
     </div>
   );
 }

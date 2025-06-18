@@ -188,17 +188,12 @@ body {
 }
 
 .chatWindow {
-  background: rgb(83,0,154);
-  background: radial-gradient(circle, rgba(83,0,154,1) 0%, rgba(0,0,0,1) 77%);
-  color: #fff;
-  margin: 0;
-  padding: 0;
-  font-family: 'Beep-Bold';
-  width: 100vw;
   display: flex;
   flex-direction: column;
-  flex-flow: column;
-  height: 100vh; /* Ensure the chat window takes the full viewport height */
+  width: 100%;
+  height: 100vh;
+  background: rgb(83,0,154);
+  background: radial-gradient(circle, rgba(83,0,154,1) 0%, rgba(0,0,0,1) 77%);
 }
 
 .sendMessageButton {
@@ -209,51 +204,78 @@ body {
   font-family: 'Beep-Bold';
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  border-radius: 30px;
-  padding-left: 25px;
-  padding-right: 25px;
-  padding: 10px;
-  height: 60px;
-  width: 99%;
-  margin: 10px;
-  position: sticky;
-  bottom: 0;
+  gap: 15px;
+  padding: 15px 20px;
+  background-color: rgba(0, 0, 0, 0.3);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 75px;
 }
 
 .chatBottomBar input {
-  background: none;
-  color: #FFF;
-  width: 95%;
+  flex: 1;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.1);
   border: none;
+  border-radius: 22px;
+  padding: 12px 20px;
+  color: white;
+  font-size: 15px;
+}
+
+.chatBottomBar input:focus {
   outline: none;
-  font-size: 18px;
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .chatBottomBar button {
+  width: 45px;
+  height: 45px;
+  padding: 0;
+  border-radius: 50%;
+  background: #50b458;
+  color: white;
+  border: none;
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #50b458;
-  color: #fff;
-  border-radius: 30px;
-  border: transparent;
-  width: 120px;
-  height: 40px;
-  margin-left: 10px;
+  transition: background 0.2s, transform 0.1s;
+}
+
+.chatBottomBar button:hover:not(:disabled) {
+  background: #5bc464;
+  transform: scale(1.05);
+}
+
+.chatBottomBar button:disabled {
+  background: #2a5f2e;
+  cursor: not-allowed;
 }
 
 .chatContent {
-  flex-grow: 1; /* Take up all available space */
-  overflow-y: auto; /* Enable scrolling if content overflows */
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 10px;
+  width: 100%;
+  flex: 1;
+  padding: 16px;
+  padding-right: 8px;
+  gap: 12px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.chatContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chatContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chatContent::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
 }
 
 .messages {
