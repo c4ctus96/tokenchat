@@ -1,89 +1,66 @@
-import React, { ReactNode, useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import HomePage from './components/HomePage';
-import "./styles.css";
-import { WagmiProvider, useAccount } from "wagmi";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createConfig, http } from "wagmi";
-import { mainnet, arbitrum } from "viem/chains";
-import { walletConnect, coinbaseWallet, injected } from "wagmi/connectors";
-import { authConnector } from "@web3modal/wagmi";
-import { createWeb3Modal } from "@web3modal/wagmi/react";
-import Signup from "./components/Signup";
+import React, { ReactNode, useEffect } from 'react';
+import { createWeb3Modal } from '@web3modal/wagmi/react';
+import { useAccount } from 'wagmi';
+import { mainnet, arbitrum } from 'viem/chains';
+import { WagmiProvider, createConfig, http } from 'wagmi';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors';
+import { authConnector } from '@web3modal/wagmi';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Chat from "./components/Chat";
-import { UserProvider, useUser } from "./components/UserContext";
-import ConnectionListener from "./components/ConnectionListener";
-
-// Custom type for Web3Modal HTML element
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'w3m-connect-button': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        label?: string;
-      };
-      'w3m-account-button': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        balance?: string;
-      };
-    }
-  }
-}
+import HomePage from "./components/HomePage";
+import { UserProvider } from "./components/UserContext";
 
 const queryClient = new QueryClient();
-const projectId = import.meta.env.VITE_WAGMI_PROJECTID; // .env is gitignored
+const projectId = import.meta.env.VITE_WAGMI_PROJECTID;
 
 if (!projectId) throw new Error("Project ID is undefined");
 
 const metadata = {
-  name: "Web3Modal",
-  description: "Web3Modal Example",
-  url: "https://web3modal.com",
+  name: "TokenChat",
+  description: "Web3 Chat Application",
+  url: "https://c4ctus96.github.io/tokenchat",
   icons: ["https://avatars.githubusercontent.com/u/37784886"],
 };
 
 const chains = [mainnet, arbitrum] as const;
 
-const connectors = [
-  walletConnect({
-    projectId,
-    metadata,
-    showQrModal: false,
-  }),
-  injected({ shimDisconnect: true }),
-  coinbaseWallet({
-    appName: metadata.name,
-    appLogoUrl: metadata.icons[0],
-  }),
-  authConnector({
-    options: { projectId },
-    socials: ['google', 'x', 'github', 'discord', 'apple'],
-    showWallets: true,
-    email: true,
-    walletFeatures: false,
-  }),
-];
-
+// Create the wagmi config first
 const wagmiConfig = createConfig({
   chains,
   transports: {
-    [mainnet.id]: http(),
-    [arbitrum.id]: http(),
+    [mainnet.id]: http('https://eth-mainnet.g.alchemy.com/v2/demo'),
+    [arbitrum.id]: http('https://arb-mainnet.g.alchemy.com/v2/demo'),
   },
-  connectors,
-  // Add better event handling
-  syncConnectedChain: true,
+  connectors: [
+    walletConnect({
+      projectId,
+      metadata,
+      showQrModal: false
+    }),
+    injected({ shimDisconnect: true }),
+    coinbaseWallet({
+      appName: metadata.name,
+      appLogoUrl: metadata.icons[0],
+    }),
+    authConnector({
+      options: { projectId },
+      socials: ['google', 'x', 'github', 'discord', 'apple'],
+      showWallets: true,
+      email: true,
+      walletFeatures: false,
+    }),
+  ],
 });
 
-// Initialize Web3Modal
+// Initialize Web3Modal with the wagmi config
 createWeb3Modal({
   wagmiConfig,
   projectId,
+  defaultChain: mainnet,
   themeMode: 'dark',
   enableAnalytics: true,
   enableOnramp: false,
-  themeVariables: {
-    '--w3m-accent': '#50b458',
-    '--w3m-border-radius-master': "5px",
-  },
 });
 
 function PrivateRoute({ children }: { children: ReactNode }) {
@@ -97,6 +74,10 @@ function ConnectionManager() {
   
   useEffect(() => {
     console.log("App initialized, connection status:", isConnected);
+    // Add error handling for MetaMask detection
+    if (typeof window.ethereum === 'undefined') {
+      console.log("MetaMask not detected, but WalletConnect can still be used");
+    }
   }, [isConnected]);
   
   return null;
@@ -105,30 +86,26 @@ function ConnectionManager() {
 // Main App component
 function App() {
   return (
-    <React.StrictMode>
-      <WagmiProvider config={wagmiConfig}>
-        <QueryClientProvider client={queryClient}>
-          <BrowserRouter>
-            <ConnectionListener />
+    <WagmiProvider config={wagmiConfig}>
+      <QueryClientProvider client={queryClient}>
+        <UserProvider>
+          <Router basename="/tokenchat">
             <ConnectionManager />
             <Routes>
               <Route path="/" element={<HomePage />} />
-              <Route path="/signup" element={<Signup />} />
               <Route
                 path="/chat"
                 element={
                   <PrivateRoute>
-                    <UserProvider>
-                      <Chat />
-                    </UserProvider>
+                    <Chat />
                   </PrivateRoute>
                 }
               />
             </Routes>
-          </BrowserRouter>
-        </QueryClientProvider>
-      </WagmiProvider>
-    </React.StrictMode>
+          </Router>
+        </UserProvider>
+      </QueryClientProvider>
+    </WagmiProvider>
   );
 }
 

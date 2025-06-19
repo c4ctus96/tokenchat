@@ -2,15 +2,7 @@ import React, { useEffect } from "react";
 import { useAccount } from "wagmi";
 import "../styles.css";
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'w3m-connect-button': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        label?: string;
-      };
-    }
-  }
-}
+// Using built-in Web3Modal types
 
 // Named function component with explicit type
 function ConnectButton(): JSX.Element {

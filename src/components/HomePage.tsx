@@ -7,15 +7,7 @@ import ProceedButton from "./ProceedButton";
 import WalletMenu from "./WalletMenu";
 
 // Define type for custom web3modal elements
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'w3m-account-button': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        balance?: string;
-      };
-    }
-  }
-}
+// Using built-in Web3Modal types
 
 function HomePage() {
   const { address, isConnected, connector } = useAccount();

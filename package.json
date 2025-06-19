@@ -1,5 +1,5 @@
 {
-  "homepage": "https://c4ctus96.github.io/tokenChat",
+  "homepage": "https://c4ctus96.github.io/tokenchat",
   "name": "sandbox",
   "private": true,
   "version": "0.0.0",
@@ -11,11 +11,12 @@
     "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "predeploy": "npm run build",
-    "deploy": "gh-pages -d build"
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@tanstack/react-query": "5.49.2",
     "@wagmi/core": "2.11.6",
+    "@web3modal/ui": "^5.1.11",
     "@web3modal/wagmi": "5.0.4",
     "firebase": "^10.12.4",
     "react": "18.3.1",
