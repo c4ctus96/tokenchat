@@ -6,20 +6,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="Content-Security-Policy" 
       content="
-        default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;
-        connect-src * 'self' 'unsafe-inline' data: blob: wss://*.walletconnect.com wss://*.walletconnect.org https://*.walletconnect.com https://*.walletconnect.org;
-        frame-src * 'self' data:;
-        script-src * 'unsafe-inline' 'unsafe-eval' blob: data:;
-        style-src * 'unsafe-inline';
-        img-src * data: blob:;
-        font-src * data:;
-        worker-src * blob:
+        default-src 'self' https://*.walletconnect.com https://*.walletconnect.org;
+        connect-src 'self' https://* wss://* data: blob:;
+        frame-src 'self' https://*.walletconnect.com https://*.walletconnect.org;
+        script-src 'self' 'unsafe-inline' 'unsafe-eval';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: https: blob:;
+        font-src 'self' data:;
+        worker-src 'self' blob:;
       "
     />
     <title>Chat 3.0</title>
-    <script type="module" crossorigin src="/tokenchat/assets/index-DxFdh7-D.js"></script>
-    <link rel="modulepreload" crossorigin href="/tokenchat/assets/walletconnect-DR4TkNmi.js">
-    <link rel="modulepreload" crossorigin href="/tokenchat/assets/vendor-DIbIWTTu.js">
+    <script type="module" crossorigin src="/tokenchat/assets/index-CzTP7HSi.js"></script>
+    <link rel="modulepreload" crossorigin href="/tokenchat/assets/react-LYHHyQqO.js">
+    <link rel="modulepreload" crossorigin href="/tokenchat/assets/walletconnect-B01gpFfU.js">
+    <link rel="modulepreload" crossorigin href="/tokenchat/assets/web3-CX8zFCq4.js">
     <link rel="stylesheet" crossorigin href="/tokenchat/assets/index-BTaDgI_t.css">
   </head>
   <body>
