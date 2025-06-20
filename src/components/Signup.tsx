@@ -43,19 +43,23 @@ function Signup() {
   };
 
   return (
-    <div className="centered-div">
-      <div className="title">
-        <h3>Register User</h3>
+    <div className="centered-signup">
+      <div className="welcomeText">
+        <h1>Welcome to Chat 3.0</h1>
+        <h2>One last step to start chatting</h2>
       </div>
       <p>Wallet Address: {address}</p>
-      <input
+      <div className="signupBox">
+         <input
         type="text"
         placeholder="Enter name"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
       <button onClick={writeData}>Register</button>
-      <pre>{JSON.stringify(data, null, 2)}</pre>
+      </div>
+     
+      {/*<pre>{JSON.stringify(data, null, 2)}</pre>*/}
     </div>
   );
 }
