@@ -61,6 +61,12 @@ createWeb3Modal({
   themeMode: 'dark',
   enableAnalytics: true,
   enableOnramp: false,
+  themeVariables: {
+    '--w3m-accent': '#50b458',
+    '--w3m-color-mix': '#210059',
+    '--w3m-color-mix-strength': 30
+    // Do not add --w3m-background
+  }
 });
 
 function PrivateRoute({ children }: { children: ReactNode }) {
