@@ -10,6 +10,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import Chat from "./components/Chat";
 import HomePage from "./components/HomePage";
 import { UserProvider } from "./components/UserContext";
+import Signup from "./components/Signup";
 
 const queryClient = new QueryClient();
 const projectId = import.meta.env.VITE_WAGMI_PROJECTID;
@@ -107,6 +108,7 @@ function App() {
                   </PrivateRoute>
                 }
               />
+              <Route path="/signup" element={ <Signup /> } />
             </Routes>
           </Router>
         </UserProvider>
