@@ -8,6 +8,8 @@ import ChatContent from "./ChatContent";
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from "./Firebase";
 import { useUser } from "./UserContext";
+import NewChatModal from "./NewChatModal";
+import { LuMessageCirclePlus } from "react-icons/lu";
 
 interface User {
   id: string;
@@ -20,6 +22,7 @@ function Chat() {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const { setCurrentUser } = useUser(); // Get the setCurrentUser function from context
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
 
   useEffect(() => {
     const fetchUsers = async () => {
@@ -72,6 +75,8 @@ function Chat() {
           />
         )}
       </ChatWindow>
+      <button className="createChatButton" onClick={() => setShowNewChatModal(true)}><LuMessageCirclePlus size={32} /></button>
+      {showNewChatModal && <NewChatModal onClose={() => setShowNewChatModal(false)} />}
     </div>
   );
 }
