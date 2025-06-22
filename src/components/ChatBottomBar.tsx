@@ -40,9 +40,14 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({ selectedChatId }) => {
       console.error("Missing required data:", { selectedChatId, currentUser, inputValue });
       return;
     }
-    
     SendMessage(inputValue, currentUser.id, selectedChatId);
     setInputValue(""); // Clear input after sending
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      handleSend();
+    }
   };
 
   return (
@@ -53,6 +58,7 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({ selectedChatId }) => {
         placeholder="Type your message"
         value={inputValue}
         onChange={handleChange}
+        onKeyDown={handleKeyDown}
       />
       <button
         className="sendMessageButton"
