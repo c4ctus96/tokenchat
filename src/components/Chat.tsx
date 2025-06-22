@@ -52,6 +52,16 @@ function Chat() {
     setSelectedChatId(chatId);
   };
 
+  // Handler for when a new chat is created
+  const handleChatCreated = (chatId: string) => {
+    console.log("New chat created with ID:", chatId);
+    // Automatically select the newly created chat
+    setSelectedChatId(chatId);
+    // You might want to refresh the chat list here if needed
+    // For now, the ChatSelector should automatically pick up the new chat
+    // since it listens to Firestore changes
+  };
+
   // Helper function to get wallet by user ID
   const getWalletById = (id: string) => {
     const user = users.find((user) => user.id === id);
@@ -75,8 +85,19 @@ function Chat() {
           />
         )}
       </ChatWindow>
-      <button className="createChatButton" onClick={() => setShowNewChatModal(true)}><LuMessageCirclePlus size={32} /></button>
-      {showNewChatModal && <NewChatModal onClose={() => setShowNewChatModal(false)} />}
+      <button 
+        className="createChatButton" 
+        onClick={() => setShowNewChatModal(true)}
+        title="Start new chat"
+      >
+        <LuMessageCirclePlus size={32} />
+      </button>
+      {showNewChatModal && (
+        <NewChatModal 
+          onClose={() => setShowNewChatModal(false)} 
+          onChatCreated={handleChatCreated}
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { firestore } from "./Firebase";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 import { useAccount } from "wagmi";
 import EthProfilePic from "./EthProfilePic";
 
@@ -29,25 +29,37 @@ function ChatSelector({ setSelectedChatId, users, getWalletById }: ChatSelectorP
   useEffect(() => {
     if (!address) return;
 
-    const fetchChatrooms = async () => {
-      try {
-        const privateChatsRef = collection(firestore, "privateChats");
-        const privateChatsSnapshot = await getDocs(privateChatsRef);
-        const privateChatsData: Chatroom[] = privateChatsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            pid: data.pid || []
-          };
-        });
-        setChatrooms(privateChatsData);
-      } catch (err) {
-        setError("Failed to fetch data. Please check your internet connection.");
-        console.error("Fetch error:", err);
-      }
-    };
+    // Set up real-time listener for privateChats collection
+    const privateChatsRef = collection(firestore, "privateChats");
     
-    fetchChatrooms();
+    const unsubscribe = onSnapshot(
+      privateChatsRef,
+      (snapshot) => {
+        try {
+          const privateChatsData: Chatroom[] = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              pid: data.pid || []
+            };
+          });
+          
+          console.log("Real-time chatrooms update:", privateChatsData);
+          setChatrooms(privateChatsData);
+          setError(null);
+        } catch (err) {
+          setError("Failed to fetch chat data. Please check your internet connection.");
+          console.error("Snapshot error:", err);
+        }
+      },
+      (error) => {
+        setError("Failed to fetch data. Please check your internet connection.");
+        console.error("Fetch error:", error);
+      }
+    );
+    
+    // Cleanup subscription on unmount or when address changes
+    return () => unsubscribe();
   }, [address]);
 
   // Determine the current user based on wallet address
