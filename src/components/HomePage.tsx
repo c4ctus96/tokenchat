@@ -5,9 +5,7 @@ import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useNavigate } from "react-router-dom";
 import ProceedButton from "./ProceedButton";
 import WalletMenu from "./WalletMenu";
-
-// Define type for custom web3modal elements
-// Using built-in Web3Modal types
+import { useResponsive } from "./useResponsive";
 
 function HomePage() {
   const { address, isConnected, connector } = useAccount();
@@ -15,6 +13,7 @@ function HomePage() {
   const { disconnect } = useDisconnect();
   const [connected, setConnected] = useState(isConnected);
   const navigate = useNavigate();
+  const { isMobile } = useResponsive();
 
   // Try to automatically reconnect on page load
   useEffect(() => {
@@ -98,7 +97,7 @@ function HomePage() {
   };
 
   return (
-    <div className="homepage">
+    <div className={`homepage ${isMobile ? 'mobile-homepage' : 'desktop-homepage'}`}>
       <div className="title">
         <h1>Chat 3.0 is here.</h1>
         <h2>Your personal web3 companion.</h2>
@@ -118,4 +117,4 @@ function HomePage() {
   );
 }
 
-export default HomePage; 
+export default HomePage;
