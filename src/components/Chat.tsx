@@ -75,6 +75,7 @@ function Chat() {
         setSelectedChatId={handleChatSelect}
         users={users}
         getWalletById={getWalletById}
+        selectedChatId={selectedChatId}
       />
       <ChatWindow selectedChatId={selectedChatId || undefined}>
         {selectedChatId && (
