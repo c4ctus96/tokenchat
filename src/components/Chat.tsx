@@ -5,10 +5,11 @@ import ChatSelector from "./ChatSelector";
 import ChatWindow from "./ChatWindow";
 import ChatContent from "./ChatContent";
 import ChatHeader from "./ChatHeader";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
 import { firestore } from "./Firebase";
 import { useUser } from "./UserContext";
 import NewChatModal from "./NewChatModal";
+import SendTransactionModal, { TransactionData } from "./SendTransactionModal";
 import { LuMessageCirclePlus } from "react-icons/lu";
 import { IoArrowBack } from "react-icons/io5";
 import { useResponsive } from "./useResponsive";
@@ -19,12 +20,21 @@ interface User {
   wallet: string;
 }
 
+interface ChatData {
+  pid: string[];
+  createdAt?: any;
+  lastActivity?: any;
+}
+
 function Chat() {
   const { address } = useAccount();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const { setCurrentUser } = useUser();
   const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [transactionRecipient, setTransactionRecipient] = useState<User | null>(null);
+  const [currentChatData, setCurrentChatData] = useState<ChatData | null>(null);
   const { isMobile } = useResponsive();
   
   // Mobile-specific state for view management
@@ -40,9 +50,37 @@ function Chat() {
         wallet: doc.data().wallet,
       }));
       setUsers(usersData);
+      console.log("Fetched users:", usersData);
     };
     fetchUsers();
   }, []);
+
+  // Fetch chat data when selectedChatId changes
+  useEffect(() => {
+    const fetchChatData = async () => {
+      if (!selectedChatId) {
+        setCurrentChatData(null);
+        return;
+      }
+
+      try {
+        const chatDoc = await getDoc(doc(firestore, "privateChats", selectedChatId));
+        if (chatDoc.exists()) {
+          const chatData = chatDoc.data() as ChatData;
+          setCurrentChatData(chatData);
+          console.log("Fetched chat data:", chatData);
+        } else {
+          console.error("Chat document not found:", selectedChatId);
+          setCurrentChatData(null);
+        }
+      } catch (error) {
+        console.error("Error fetching chat data:", error);
+        setCurrentChatData(null);
+      }
+    };
+
+    fetchChatData();
+  }, [selectedChatId]);
 
   // Update currentUser in context whenever users or address changes
   useEffect(() => {
@@ -87,14 +125,68 @@ function Chat() {
 
   // Get the name of the currently selected chat participant
   const getCurrentChatName = () => {
-    if (!selectedChatId || !users.length) return "";
-    
-    const currentUser = users.find(user => user.wallet === address);
-    if (!currentUser) return "";
-
-    // This is a simplified version - you might want to fetch this from your chat data
-    return "Chat"; // You can enhance this to show the actual participant name
+    const recipientUser = getRecipientUser();
+    return recipientUser ? recipientUser.name : "Chat";
   };
+
+  // Get recipient user for the current chat - IMPROVED VERSION
+  const getRecipientUser = (): User | null => {
+    console.log("Getting recipient user...");
+    console.log("Selected chat ID:", selectedChatId);
+    console.log("Current chat data:", currentChatData);
+    console.log("Current address:", address);
+    console.log("Available users:", users);
+
+    if (!selectedChatId || !currentChatData || !address || users.length === 0) {
+      console.log("Missing required data for recipient detection");
+      return null;
+    }
+
+    // Find the current user
+    const currentUser = users.find(user => user.wallet === address);
+    if (!currentUser) {
+      console.log("Current user not found in users list");
+      return null;
+    }
+
+    console.log("Current user found:", currentUser);
+
+    // Get the other participant from the chat's pid array
+    const otherParticipantId = currentChatData.pid.find(id => id !== currentUser.id);
+    if (!otherParticipantId) {
+      console.log("Other participant ID not found in chat data");
+      return null;
+    }
+
+    console.log("Other participant ID:", otherParticipantId);
+
+    // Find the other participant in the users list
+    const recipientUser = users.find(user => user.id === otherParticipantId);
+    console.log("Recipient user found:", recipientUser);
+
+    return recipientUser || null;
+  };
+
+  // Handle sending transactions
+  const handleSendTransaction = (recipientUser: User) => {
+    console.log("Handle send transaction called with:", recipientUser);
+    setTransactionRecipient(recipientUser);
+    setShowTransactionModal(true);
+  };
+
+  // Handle successful transaction
+  const handleTransactionSent = (transactionData: TransactionData) => {
+    console.log("Transaction sent:", transactionData);
+    setShowTransactionModal(false);
+    setTransactionRecipient(null);
+    // Transaction message will be automatically added to chat by ChatBottomBar
+  };
+
+  // Debug: Log recipient user whenever it changes
+  useEffect(() => {
+    const recipient = getRecipientUser();
+    console.log("Recipient user updated:", recipient);
+  }, [selectedChatId, currentChatData, users, address]);
 
   // Desktop Layout
   if (!isMobile) {
@@ -114,11 +206,17 @@ function Chat() {
                 onBack={handleBackToList}
                 showBackButton={false}
               />
-              <ChatWindow selectedChatId={selectedChatId}>
+              <ChatWindow 
+                selectedChatId={selectedChatId}
+                onSendTransaction={handleSendTransaction}
+                recipientUser={getRecipientUser()}
+              >
                 <ChatContent
                   selectedChatId={selectedChatId}
                   users={users}
                   getWalletById={getWalletById}
+                  onSendTransaction={handleSendTransaction}
+                  recipientUser={getRecipientUser()}
                 />
               </ChatWindow>
             </>
@@ -183,11 +281,17 @@ function Chat() {
             showBackButton={true}
           />
           {selectedChatId && (
-            <ChatWindow selectedChatId={selectedChatId}>
+            <ChatWindow 
+              selectedChatId={selectedChatId}
+              onSendTransaction={handleSendTransaction}
+              recipientUser={getRecipientUser()}
+            >
               <ChatContent
                 selectedChatId={selectedChatId}
                 users={users}
                 getWalletById={getWalletById}
+                onSendTransaction={handleSendTransaction}
+                recipientUser={getRecipientUser()}
               />
             </ChatWindow>
           )}
@@ -198,6 +302,17 @@ function Chat() {
         <NewChatModal 
           onClose={() => setShowNewChatModal(false)} 
           onChatCreated={handleChatCreated}
+        />
+      )}
+
+      {showTransactionModal && transactionRecipient && (
+        <SendTransactionModal
+          onClose={() => {
+            setShowTransactionModal(false);
+            setTransactionRecipient(null);
+          }}
+          recipientUser={transactionRecipient}
+          onTransactionSent={handleTransactionSent}
         />
       )}
     </div>

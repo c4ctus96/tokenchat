@@ -2,13 +2,17 @@ import React, { useState, useEffect, useRef } from "react";
 import { firestore } from "./Firebase";
 import { collection, query, orderBy, onSnapshot, Timestamp } from "firebase/firestore";
 import Message from "./Message";
+import TransactionMessage from "./TransactionMessage";
 import { useAccount } from "wagmi";
 import { useUser } from "./UserContext";
+import { TransactionData } from "./SendTransactionModal";
 
 interface ChatMessage {
   txt: string;
   ts: Timestamp;
   from: string;
+  type?: 'text' | 'transaction';
+  transactionData?: TransactionData;
 }
 
 interface User {
@@ -21,9 +25,17 @@ interface ChatContentProps {
   selectedChatId: string;
   users: User[];
   getWalletById: (id: string) => string;
+  onSendTransaction?: (recipientUser: User) => void;
+  recipientUser?: User | null;
 }
 
-function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps) {
+function ChatContent({ 
+  selectedChatId, 
+  users, 
+  getWalletById, 
+  onSendTransaction,
+  recipientUser 
+}: ChatContentProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const { address } = useAccount();
   const { currentUser } = useUser();
@@ -72,6 +84,19 @@ function ChatContent({ selectedChatId, users, getWalletById }: ChatContentProps)
       {messages.map((message, index) => {
         const isOwnMessage = currentUser?.id ? message.from === currentUser.id : false;
         
+        // Render transaction messages differently
+        if (message.type === 'transaction' && message.transactionData) {
+          return (
+            <TransactionMessage
+              key={index}
+              transaction={message.transactionData}
+              own={isOwnMessage}
+              timeStamp={message.ts.toMillis()}
+            />
+          );
+        }
+
+        // Render regular text messages
         return (
           <Message
             key={index}

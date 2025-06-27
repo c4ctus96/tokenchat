@@ -1,0 +1,157 @@
+import React from "react";
+import { IoSend, IoCheckmark, IoClose, IoTime } from "react-icons/io5";
+import { TransactionData } from "./SendTransactionModal";
+import "../styles.css";
+
+interface TransactionMessageProps {
+  transaction: TransactionData;
+  own: boolean;
+  timeStamp: number;
+}
+
+const TransactionMessage: React.FC<TransactionMessageProps> = ({ 
+  transaction, 
+  own, 
+  timeStamp 
+}) => {
+  // Get network name and symbol
+  const getNetworkInfo = (chainId: number) => {
+    switch (chainId) {
+      case 1: return { name: 'Ethereum', symbol: 'ETH', color: '#627EEA' };
+      case 137: return { name: 'Polygon', symbol: 'MATIC', color: '#8247E5' };
+      case 42161: return { name: 'Arbitrum', symbol: 'ETH', color: '#28A0F0' };
+      case 10: return { name: 'Optimism', symbol: 'ETH', color: '#FF0420' };
+      case 8453: return { name: 'Base', symbol: 'ETH', color: '#0052FF' };
+      default: return { name: 'Unknown', symbol: 'ETH', color: '#666' };
+    }
+  };
+
+  const networkInfo = getNetworkInfo(transaction.chainId);
+
+  // Status icon and text
+  const getStatusInfo = () => {
+    switch (transaction.status) {
+      case 'pending':
+        return {
+          icon: <IoTime size={16} />,
+          text: 'Pending',
+          className: 'pending'
+        };
+      case 'confirmed':
+        return {
+          icon: <IoCheckmark size={16} />,
+          text: 'Confirmed',
+          className: 'confirmed'
+        };
+      case 'failed':
+        return {
+          icon: <IoClose size={16} />,
+          text: 'Failed',
+          className: 'failed'
+        };
+      default:
+        return {
+          icon: <IoTime size={16} />,
+          text: 'Unknown',
+          className: 'unknown'
+        };
+    }
+  };
+
+  const statusInfo = getStatusInfo();
+
+  // Format amount for display
+  const formatAmount = (amount: string) => {
+    const num = parseFloat(amount);
+    if (num < 0.0001) return num.toExponential(2);
+    if (num < 1) return num.toFixed(6);
+    if (num < 1000) return num.toFixed(4);
+    return num.toFixed(2);
+  };
+
+  // Create block explorer URL
+  const getExplorerUrl = () => {
+    const baseUrls: { [key: number]: string } = {
+      1: 'https://etherscan.io/tx/',
+      137: 'https://polygonscan.com/tx/',
+      42161: 'https://arbiscan.io/tx/',
+      10: 'https://optimistic.etherscan.io/tx/',
+      8453: 'https://basescan.org/tx/',
+    };
+    
+    const baseUrl = baseUrls[transaction.chainId];
+    return baseUrl ? `${baseUrl}${transaction.hash}` : null;
+  };
+
+  const explorerUrl = getExplorerUrl();
+
+  return (
+    <div className="messageBox">
+      <div className={`message transaction-message ${own ? 'own' : ''}`}>
+        {/* Transaction Header */}
+        <div className="transaction-header">
+          <div className="transaction-icon">
+            <IoSend size={20} />
+          </div>
+          <div className="transaction-title">
+            <span>
+              {own ? `Sent to ${transaction.recipientName}` : `Received from ${transaction.senderName}`}
+            </span>
+          </div>
+          <div className={`transaction-status ${statusInfo.className}`}>
+            {statusInfo.icon}
+            <span>{statusInfo.text}</span>
+          </div>
+        </div>
+
+        {/* Transaction Amount */}
+        <div className="transaction-amount">
+          <span className="amount">
+            {own ? '-' : '+'}{formatAmount(transaction.amount)}
+          </span>
+          <span className="currency">{networkInfo.symbol}</span>
+        </div>
+
+        {/* Network Badge */}
+        <div className="transaction-network">
+          <div 
+            className="network-badge"
+            style={{ backgroundColor: networkInfo.color }}
+          >
+            {networkInfo.name}
+          </div>
+        </div>
+
+        {/* Transaction Details */}
+        <div className="transaction-details">
+          <div className="detail-row">
+            <span className="label">Hash:</span>
+            <span className="value hash">
+              {transaction.hash.slice(0, 8)}...{transaction.hash.slice(-6)}
+            </span>
+          </div>
+          
+          {explorerUrl && (
+            <div className="transaction-explorer">
+              <a 
+                href={explorerUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="explorer-link"
+              >
+                View on Explorer →
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Timestamp */}
+        <div className="message-timestamp">
+          {new Date(timeStamp).toLocaleString()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TransactionMessage;

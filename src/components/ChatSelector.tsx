@@ -21,7 +21,7 @@ interface ChatSelectorProps {
   setSelectedChatId: (id: string) => void;
   users: User[];
   getWalletById: (id: string) => string;
-  selectedChatId?: string | null; // Add this to track which chat is currently open
+  selectedChatId?: string | null;
 }
 
 function ChatSelector({ setSelectedChatId, users, getWalletById, selectedChatId }: ChatSelectorProps) {
