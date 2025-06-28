@@ -17,12 +17,60 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
   // Get network name and symbol
   const getNetworkInfo = (chainId: number) => {
     switch (chainId) {
-      case 1: return { name: 'Ethereum', symbol: 'ETH', color: '#627EEA' };
-      case 137: return { name: 'Polygon', symbol: 'MATIC', color: '#8247E5' };
-      case 42161: return { name: 'Arbitrum', symbol: 'ETH', color: '#28A0F0' };
-      case 10: return { name: 'Optimism', symbol: 'ETH', color: '#FF0420' };
-      case 8453: return { name: 'Base', symbol: 'ETH', color: '#0052FF' };
-      default: return { name: 'Unknown', symbol: 'ETH', color: '#666' };
+      case 1: return { 
+        name: 'Ethereum', 
+        symbol: 'ETH', 
+        color: '#627EEA',
+        explorerUrl: 'https://etherscan.io'
+      };
+      case 56: return { 
+        name: 'BSC', 
+        symbol: 'BNB', 
+        color: '#F3BA2F',
+        explorerUrl: 'https://bscscan.com'
+      };
+      case 137: return { 
+        name: 'Polygon', 
+        symbol: 'MATIC', 
+        color: '#8247E5',
+        explorerUrl: 'https://polygonscan.com'
+      };
+      case 42161: return { 
+        name: 'Arbitrum', 
+        symbol: 'ETH', 
+        color: '#28A0F0',
+        explorerUrl: 'https://arbiscan.io'
+      };
+      case 10: return { 
+        name: 'Optimism', 
+        symbol: 'ETH', 
+        color: '#FF0420',
+        explorerUrl: 'https://optimistic.etherscan.io'
+      };
+      case 8453: return { 
+        name: 'Base', 
+        symbol: 'ETH', 
+        color: '#0052FF',
+        explorerUrl: 'https://basescan.org'
+      };
+      case 43114: return { 
+        name: 'Avalanche', 
+        symbol: 'AVAX', 
+        color: '#E84142',
+        explorerUrl: 'https://snowtrace.io'
+      };
+      case 250: return { 
+        name: 'Fantom', 
+        symbol: 'FTM', 
+        color: '#1969FF',
+        explorerUrl: 'https://ftmscan.com'
+      };
+      default: return { 
+        name: 'Unknown', 
+        symbol: 'ETH', 
+        color: '#666',
+        explorerUrl: null
+      };
     }
   };
 
@@ -71,16 +119,8 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
 
   // Create block explorer URL
   const getExplorerUrl = () => {
-    const baseUrls: { [key: number]: string } = {
-      1: 'https://etherscan.io/tx/',
-      137: 'https://polygonscan.com/tx/',
-      42161: 'https://arbiscan.io/tx/',
-      10: 'https://optimistic.etherscan.io/tx/',
-      8453: 'https://basescan.org/tx/',
-    };
-    
-    const baseUrl = baseUrls[transaction.chainId];
-    return baseUrl ? `${baseUrl}${transaction.hash}` : null;
+    if (!networkInfo.explorerUrl) return null;
+    return `${networkInfo.explorerUrl}/tx/${transaction.hash}`;
   };
 
   const explorerUrl = getExplorerUrl();

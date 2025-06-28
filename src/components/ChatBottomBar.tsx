@@ -11,7 +11,13 @@ interface ChatBottomBarProps {
   recipientUser?: { id: string; name: string; wallet: string };
 }
 
-const SendMessage = async (txt: string, from: string, chatId: string, messageType: 'text' | 'transaction' = 'text', transactionData?: TransactionData) => {
+const SendMessage = async (
+  txt: string, 
+  from: string, 
+  chatId: string, 
+  messageType: 'text' | 'transaction' = 'text', 
+  transactionData?: TransactionData
+) => {
   try {
     const chatMessagesCollectionRef = collection(
       firestore,
@@ -36,6 +42,7 @@ const SendMessage = async (txt: string, from: string, chatId: string, messageTyp
     console.log("Message sent successfully");
   } catch (error) {
     console.error("Error sending message:", error);
+    throw error;
   }
 };
 
@@ -51,13 +58,19 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
     setInputValue(e.target.value);
   };
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!selectedChatId || !currentUser || !inputValue.trim()) {
       console.error("Missing required data:", { selectedChatId, currentUser, inputValue });
       return;
     }
-    SendMessage(inputValue, currentUser.id, selectedChatId);
-    setInputValue(""); // Clear input after sending
+
+    try {
+      await SendMessage(inputValue.trim(), currentUser.id, selectedChatId);
+      setInputValue(""); // Clear input after sending
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      // Optionally show error to user
+    }
   };
 
   const handleSendTransaction = () => {
@@ -69,36 +82,9 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
       handleSend();
-    }
-  };
-
-  // Handle transaction completion
-  const handleTransactionSent = async (transactionData: TransactionData) => {
-    if (!selectedChatId || !currentUser) return;
-
-    // Create a transaction message in the chat
-    const transactionMessage = `Sent ${transactionData.amount} ${getTokenSymbol(transactionData.chainId)} to ${transactionData.recipientName}`;
-    
-    await SendMessage(
-      transactionMessage,
-      currentUser.id,
-      selectedChatId,
-      'transaction',
-      transactionData
-    );
-  };
-
-  // Helper function to get token symbol based on chain
-  const getTokenSymbol = (chainId: number): string => {
-    switch (chainId) {
-      case 1: return 'ETH';
-      case 137: return 'MATIC';
-      case 42161: return 'ETH';
-      case 10: return 'ETH';
-      case 8453: return 'ETH';
-      default: return 'ETH';
     }
   };
 
@@ -107,7 +93,7 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       <input
         type="text"
         className="messageInput"
-        placeholder="Type your message"
+        placeholder="Type your message..."
         value={inputValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -127,7 +113,7 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       <button
         className="sendMessageButton"
         onClick={handleSend}
-        disabled={!selectedChatId || !currentUser}
+        disabled={!selectedChatId || !currentUser || !inputValue.trim()}
         title="Send message"
       >
         <IoSend size={20} />
@@ -136,6 +122,46 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
   );
 };
 
-// Export both the component and the helper function for external use
+// Helper function to send transaction messages to chat
+export const SendTransactionMessage = async (
+  transactionData: TransactionData,
+  chatId: string,
+  senderId: string
+) => {
+  try {
+    // Create a descriptive message text
+    const messageText = `Sent ${transactionData.amount} ${getTokenSymbol(transactionData.chainId)} to ${transactionData.recipientName}`;
+    
+    await SendMessage(
+      messageText,
+      senderId,
+      chatId,
+      'transaction',
+      transactionData
+    );
+    
+    console.log("Transaction message sent to chat");
+  } catch (error) {
+    console.error("Failed to send transaction message:", error);
+    throw error;
+  }
+};
+
+// Helper function to get token symbol based on chain
+const getTokenSymbol = (chainId: number): string => {
+  switch (chainId) {
+    case 1: return 'ETH';
+    case 56: return 'BNB';
+    case 137: return 'MATIC';
+    case 42161: return 'ETH';
+    case 10: return 'ETH';
+    case 8453: return 'ETH';
+    case 43114: return 'AVAX';
+    case 250: return 'FTM';
+    default: return 'ETH';
+  }
+};
+
+// Export both the component and the helper functions for external use
 export { SendMessage };
 export default ChatBottomBar;

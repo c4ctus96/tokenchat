@@ -437,6 +437,152 @@ body {
   flex-direction: column;
 }
 
+/* Transaction Message Styles */
+.transaction-message {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border: 1px solid rgba(80, 180, 88, 0.3);
+  border-radius: 16px;
+  padding: 16px;
+  max-width: 85%;
+  min-width: 280px;
+}
+
+.transaction-message.own {
+  background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+  border-color: rgba(80, 180, 88, 0.5);
+}
+
+.transaction-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.transaction-icon {
+  background: rgba(80, 180, 88, 0.2);
+  border-radius: 50%;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #50b458;
+}
+
+.transaction-title {
+  flex: 1;
+  font-size: 0.9rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.transaction-status {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+
+.transaction-status.pending {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.transaction-status.confirmed {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.transaction-status.failed {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.transaction-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.amount {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.currency {
+  font-size: 1rem;
+  color: #ccc;
+}
+
+.transaction-network {
+  margin-bottom: 12px;
+}
+
+.network-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: bold;
+  color: #fff;
+}
+
+.transaction-details {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.detail-row:last-child {
+  margin-bottom: 0;
+}
+
+.label {
+  font-size: 0.8rem;
+  color: #ccc;
+}
+
+.value {
+  font-size: 0.8rem;
+  color: #fff;
+}
+
+.hash {
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.transaction-explorer {
+  text-align: center;
+  margin-top: 8px;
+}
+
+.explorer-link {
+  color: #50b458;
+  text-decoration: none;
+  font-size: 0.8rem;
+  transition: color 0.2s ease;
+}
+
+.explorer-link:hover {
+  color: #5bc464;
+  text-decoration: underline;
+}
+
 /* Mobile message adjustments */
 @media (max-width: 768px) {
   .message {
@@ -447,6 +593,15 @@ body {
   
   .message-text {
     font-size: 1rem;
+  }
+
+  .transaction-message {
+    min-width: 250px;
+    max-width: 90%;
+  }
+
+  .amount {
+    font-size: 1.3rem;
   }
 }
 
@@ -510,6 +665,14 @@ body {
 .chatBottomBar button:disabled {
   background: #2a5f2e;
   cursor: not-allowed;
+}
+
+.transactionButton {
+  background: #6f42c1 !important;
+}
+
+.transactionButton:hover:not(:disabled) {
+  background: #7952cc !important;
 }
 
 /* Mobile bottom bar adjustments */
@@ -823,6 +986,337 @@ body {
   overflow-y: auto;
 }
 
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.modal-footer {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  justify-content: flex-end;
+}
+
+.modal-footer button {
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-family: 'Beep-Bold';
+  font-size: 14px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.send-btn {
+  background: #50b458;
+  color: #fff;
+}
+
+.send-btn:hover:not(:disabled) {
+  background: #5bc464;
+}
+
+.send-btn:disabled {
+  background: #666;
+  cursor: not-allowed;
+}
+
+.retry-btn {
+  background: #50b458;
+  color: #fff;
+}
+
+.retry-btn:hover {
+  background: #5bc464;
+}
+
+/* Transaction Modal Specific Styles */
+.transaction-modal {
+  min-width: 400px;
+  max-width: 500px;
+}
+
+.transaction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.recipient-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.recipient-details h4 {
+  margin: 0 0 4px 0;
+  font-size: 16px;
+  color: #fff;
+}
+
+.recipient-address {
+  margin: 0;
+  font-size: 12px;
+  color: #ccc;
+  font-family: monospace;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-group label {
+  font-size: 14px;
+  color: #ccc;
+  font-weight: bold;
+}
+
+.amount-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.amount-input-group input {
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0 16px;
+  color: #fff;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.amount-input-group input:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #50b458;
+}
+
+.amount-input-group input.error {
+  border-color: #ff4444;
+}
+
+.amount-input-group input::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.quick-amounts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.quick-amount-btn {
+  background: rgba(80, 180, 88, 0.2);
+  border: 1px solid rgba(80, 180, 88, 0.3);
+  color: #50b458;
+  padding: 6px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-amount-btn:hover {
+  background: rgba(80, 180, 88, 0.3);
+  border-color: rgba(80, 180, 88, 0.5);
+}
+
+.balance-info {
+  font-size: 12px;
+  color: #ccc;
+  text-align: right;
+}
+
+.form-group textarea {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 12px 16px;
+  color: #fff;
+  font-size: 14px;
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.form-group textarea:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: #50b458;
+}
+
+.form-group textarea::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.error-text {
+  color: #ff4444;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.network-info {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 16px;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.transaction-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.status-icon {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 24px;
+  font-size: 36px;
+  font-weight: bold;
+}
+
+.status-icon.confirming {
+  background: rgba(255, 193, 7, 0.2);
+  color: #ffc107;
+}
+
+.status-icon.pending {
+  background: rgba(0, 123, 255, 0.2);
+  color: #007bff;
+}
+
+.status-icon.success {
+  background: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+}
+
+.status-icon.error {
+  background: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid transparent;
+  border-top: 3px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.transaction-status h3 {
+  margin: 0 0 12px 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.transaction-status p {
+  margin: 0 0 16px 0;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.transaction-hash {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 16px 0;
+}
+
+.transaction-hash p {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #ccc;
+}
+
+.transaction-hash code {
+  font-family: monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.error-message {
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  margin: 16px 0;
+}
+
+.auto-close {
+  font-size: 12px;
+  color: #888;
+  font-style: italic;
+  margin-top: 16px;
+}
+
 /* Mobile modal adjustments */
 @media (max-width: 768px) {
   .modalOverlay {
@@ -833,6 +1327,41 @@ body {
     min-width: 280px;
     padding: 24px 20px;
     border-radius: 12px;
+  }
+
+  .transaction-modal {
+    min-width: 280px;
+    max-width: 95vw;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .modal-footer button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .recipient-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 12px;
+  }
+
+  .quick-amounts {
+    justify-content: center;
+  }
+
+  .status-icon {
+    width: 60px;
+    height: 60px;
+    font-size: 24px;
+  }
+
+  .spinner {
+    width: 24px;
+    height: 24px;
   }
 }
 

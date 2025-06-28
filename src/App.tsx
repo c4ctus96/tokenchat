@@ -1,7 +1,7 @@
 import React, { ReactNode, useEffect } from 'react';
 import { createWeb3Modal } from '@web3modal/wagmi/react';
 import { useAccount } from 'wagmi';
-import { mainnet, arbitrum } from 'viem/chains';
+import { mainnet, arbitrum, bsc, polygon, optimism, base } from 'viem/chains';
 import { WagmiProvider, createConfig, http } from 'wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { walletConnect, injected, coinbaseWallet } from 'wagmi/connectors';
@@ -24,14 +24,19 @@ const metadata = {
   icons: ["https://avatars.githubusercontent.com/u/37784886"],
 };
 
-const chains = [mainnet, arbitrum] as const;
+// Include more chains including BSC
+const chains = [mainnet, bsc, polygon, arbitrum, optimism, base] as const;
 
 // Create the wagmi config first
 const wagmiConfig = createConfig({
   chains,
   transports: {
     [mainnet.id]: http('https://eth-mainnet.g.alchemy.com/v2/demo'),
+    [bsc.id]: http('https://bsc-dataseed1.binance.org'),
+    [polygon.id]: http('https://polygon-rpc.com'),
     [arbitrum.id]: http('https://arb-mainnet.g.alchemy.com/v2/demo'),
+    [optimism.id]: http('https://mainnet.optimism.io'),
+    [base.id]: http('https://mainnet.base.org'),
   },
   connectors: [
     walletConnect({

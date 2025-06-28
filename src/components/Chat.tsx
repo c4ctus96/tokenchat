@@ -10,6 +10,7 @@ import { firestore } from "./Firebase";
 import { useUser } from "./UserContext";
 import NewChatModal from "./NewChatModal";
 import SendTransactionModal, { TransactionData } from "./SendTransactionModal";
+import { SendTransactionMessage } from "./ChatBottomBar";
 import { LuMessageCirclePlus } from "react-icons/lu";
 import { IoArrowBack } from "react-icons/io5";
 import { useResponsive } from "./useResponsive";
@@ -30,7 +31,7 @@ function Chat() {
   const { address } = useAccount();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  const { setCurrentUser } = useUser();
+  const { setCurrentUser, currentUser } = useUser();
   const [showNewChatModal, setShowNewChatModal] = useState(false);
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [transactionRecipient, setTransactionRecipient] = useState<User | null>(null);
@@ -42,15 +43,19 @@ function Chat() {
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const usersRef = collection(firestore, "users");
-      const usersSnapshot = await getDocs(usersRef);
-      const usersData = usersSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name,
-        wallet: doc.data().wallet,
-      }));
-      setUsers(usersData);
-      console.log("Fetched users:", usersData);
+      try {
+        const usersRef = collection(firestore, "users");
+        const usersSnapshot = await getDocs(usersRef);
+        const usersData = usersSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          name: doc.data().name,
+          wallet: doc.data().wallet,
+        }));
+        setUsers(usersData);
+        console.log("Fetched users:", usersData);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      }
     };
     fetchUsers();
   }, []);
@@ -85,9 +90,9 @@ function Chat() {
   // Update currentUser in context whenever users or address changes
   useEffect(() => {
     if (users.length > 0 && address) {
-      const currentUser = users.find(user => user.wallet === address);
-      console.log("Current User:", currentUser);
-      setCurrentUser(currentUser);
+      const foundCurrentUser = users.find(user => user.wallet === address);
+      console.log("Current User:", foundCurrentUser);
+      setCurrentUser(foundCurrentUser);
     }
   }, [users, address, setCurrentUser]);
 
@@ -143,16 +148,16 @@ function Chat() {
     }
 
     // Find the current user
-    const currentUser = users.find(user => user.wallet === address);
-    if (!currentUser) {
+    const foundCurrentUser = users.find(user => user.wallet === address);
+    if (!foundCurrentUser) {
       console.log("Current user not found in users list");
       return null;
     }
 
-    console.log("Current user found:", currentUser);
+    console.log("Current user found:", foundCurrentUser);
 
     // Get the other participant from the chat's pid array
-    const otherParticipantId = currentChatData.pid.find(id => id !== currentUser.id);
+    const otherParticipantId = currentChatData.pid.find(id => id !== foundCurrentUser.id);
     if (!otherParticipantId) {
       console.log("Other participant ID not found in chat data");
       return null;
@@ -190,11 +195,32 @@ function Chat() {
   };
 
   // Handle successful transaction
-  const handleTransactionSent = (transactionData: TransactionData) => {
+  const handleTransactionSent = async (transactionData: TransactionData) => {
     console.log("Transaction sent:", transactionData);
+    
+    // Close the transaction modal
     setShowTransactionModal(false);
     setTransactionRecipient(null);
-    // Transaction message will be automatically added to chat by ChatBottomBar
+    
+    // Send transaction message to the chat
+    if (selectedChatId && currentUser) {
+      try {
+        await SendTransactionMessage(transactionData, selectedChatId, currentUser.id);
+        console.log("Transaction message added to chat");
+      } catch (error) {
+        console.error("Failed to add transaction message to chat:", error);
+        // The transaction was successful but we couldn't add it to chat
+        // Could show a toast notification to the user about this
+      }
+    } else {
+      console.error("Missing chat ID or current user for transaction message");
+    }
+  };
+
+  // Handle closing transaction modal
+  const handleCloseTransactionModal = () => {
+    setShowTransactionModal(false);
+    setTransactionRecipient(null);
   };
 
   // Log recipient user whenever it changes
@@ -259,10 +285,7 @@ function Chat() {
 
         {showTransactionModal && transactionRecipient && (
           <SendTransactionModal
-            onClose={() => {
-              setShowTransactionModal(false);
-              setTransactionRecipient(null);
-            }}
+            onClose={handleCloseTransactionModal}
             recipientUser={transactionRecipient}
             onTransactionSent={handleTransactionSent}
           />
@@ -334,10 +357,7 @@ function Chat() {
 
       {showTransactionModal && transactionRecipient && (
         <SendTransactionModal
-          onClose={() => {
-            setShowTransactionModal(false);
-            setTransactionRecipient(null);
-          }}
+          onClose={handleCloseTransactionModal}
           recipientUser={transactionRecipient}
           onTransactionSent={handleTransactionSent}
         />
