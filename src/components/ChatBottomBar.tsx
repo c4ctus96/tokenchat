@@ -132,17 +132,6 @@ const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
       >
         <IoSend size={20} />
       </button>
-      <button 
-        onClick={() => {
-          console.log("DEBUG: Forcing modal open");
-          if (onSendTransaction && recipientUser) {
-            onSendTransaction(recipientUser);
-          }
-        }}
-        style={{background: 'red'}}
-        >
-        DEBUG MODAL
-      </button>
     </div>
   );
 };

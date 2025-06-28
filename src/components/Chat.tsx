@@ -129,7 +129,7 @@ function Chat() {
     return recipientUser ? recipientUser.name : "Chat";
   };
 
-  // Get recipient user for the current chat - IMPROVED VERSION
+  // Get recipient user for the current chat
   const getRecipientUser = (): User | null => {
     console.log("Getting recipient user...");
     console.log("Selected chat ID:", selectedChatId);
@@ -170,8 +170,23 @@ function Chat() {
   // Handle sending transactions
   const handleSendTransaction = (recipientUser: User) => {
     console.log("Handle send transaction called with:", recipientUser);
-    setTransactionRecipient(recipientUser);
-    setShowTransactionModal(true);
+    
+    // Validate input
+    if (!recipientUser || !recipientUser.wallet || !recipientUser.name) {
+      console.error("Invalid recipient user:", recipientUser);
+      return;
+    }
+    
+    // Use functional updates for better state management
+    setTransactionRecipient(prev => {
+      console.log("Setting recipient from", prev, "to", recipientUser);
+      return recipientUser;
+    });
+    
+    setShowTransactionModal(prev => {
+      console.log("Setting modal visibility from", prev, "to true");
+      return true;
+    });
   };
 
   // Handle successful transaction
@@ -182,7 +197,7 @@ function Chat() {
     // Transaction message will be automatically added to chat by ChatBottomBar
   };
 
-  // Debug: Log recipient user whenever it changes
+  // Log recipient user whenever it changes
   useEffect(() => {
     const recipient = getRecipientUser();
     console.log("Recipient user updated:", recipient);
@@ -234,10 +249,22 @@ function Chat() {
         >
           <LuMessageCirclePlus size={24} />
         </button>
+
         {showNewChatModal && (
           <NewChatModal 
             onClose={() => setShowNewChatModal(false)} 
             onChatCreated={handleChatCreated}
+          />
+        )}
+
+        {showTransactionModal && transactionRecipient && (
+          <SendTransactionModal
+            onClose={() => {
+              setShowTransactionModal(false);
+              setTransactionRecipient(null);
+            }}
+            recipientUser={transactionRecipient}
+            onTransactionSent={handleTransactionSent}
           />
         )}
       </div>
