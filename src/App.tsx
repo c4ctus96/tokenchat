@@ -27,16 +27,17 @@ const metadata = {
 // Include more chains including BSC
 const chains = [mainnet, bsc, polygon, arbitrum, optimism, base] as const;
 
-// Create the wagmi config first
+// Create the wagmi config with completely free public RPC endpoints
 const wagmiConfig = createConfig({
   chains,
   transports: {
-    [mainnet.id]: http('https://eth-mainnet.g.alchemy.com/v2/demo'),
-    [bsc.id]: http('https://bsc-dataseed1.binance.org'),
+    // Use completely free public RPC endpoints that don't require API keys
+    [mainnet.id]: http('https://ethereum-rpc.publicnode.com'),
+    [bsc.id]: http('https://bsc-dataseed1.defibit.io'),
     [polygon.id]: http('https://polygon-rpc.com'),
-    [arbitrum.id]: http('https://arb-mainnet.g.alchemy.com/v2/demo'),
-    [optimism.id]: http('https://mainnet.optimism.io'),
-    [base.id]: http('https://mainnet.base.org'),
+    [arbitrum.id]: http('https://arbitrum-one-rpc.publicnode.com'),
+    [optimism.id]: http('https://optimism-rpc.publicnode.com'),
+    [base.id]: http('https://base-rpc.publicnode.com'),
   },
   connectors: [
     walletConnect({

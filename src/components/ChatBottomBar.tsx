@@ -129,8 +129,12 @@ export const SendTransactionMessage = async (
   senderId: string
 ) => {
   try {
-    // Create a descriptive message text
-    const messageText = `Sent ${transactionData.amount} ${getTokenSymbol(transactionData.chainId)} to ${transactionData.recipientName}`;
+    // Create a descriptive message text with comment if available
+    let messageText = `Sent ${transactionData.amount} ${getTokenSymbol(transactionData.chainId)} to ${transactionData.recipientName}`;
+    
+    if (transactionData.comment) {
+      messageText += ` - ${transactionData.comment}`;
+    }
     
     await SendMessage(
       messageText,

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { SlClose } from "react-icons/sl";
 import { IoSend } from "react-icons/io5";
-import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, useChainId, useSwitchChain } from "wagmi";
-import { parseEther, formatEther, isAddress } from "viem";
+import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, useChainId, useEstimateGas, useGasPrice } from "wagmi";
+import { parseEther, isAddress, formatEther } from "viem";
 import { useUser } from "./UserContext";
 import EthProfilePic from "./EthProfilePic";
 import "../styles.css";
@@ -27,6 +27,9 @@ export interface TransactionData {
   recipientName: string;
   senderName: string;
   status: 'pending' | 'confirmed' | 'failed';
+  comment?: string;
+  gasUsed?: string;
+  gasFee?: string;
 }
 
 const SendTransactionModal: React.FC<SendTransactionModalProps> = ({ 
@@ -37,7 +40,6 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
   const { address } = useAccount();
   const { currentUser } = useUser();
   const chainId = useChainId();
-  const { switchChain } = useSwitchChain();
   
   // Transaction form state
   const [amount, setAmount] = useState("");
@@ -45,12 +47,63 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
   const [message, setMessage] = useState("");
   const [step, setStep] = useState<'form' | 'confirming' | 'pending' | 'success' | 'error'>('form');
   const [error, setError] = useState<string | null>(null);
+  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+
+  // Helper functions (declared early to avoid hoisting issues)
+  const isValidAddress = () => {
+    return isAddress(recipientAddress);
+  };
+
+  const isValidAmount = () => {
+    try {
+      const parsedAmount = parseFloat(amount);
+      if (parsedAmount <= 0) return false;
+      if (!balance) return false;
+      
+      // Check if user has enough balance including gas fees
+      const total = totalCost ? parseFloat(totalCost) : parsedAmount;
+      return total <= parseFloat(balance.formatted);
+    } catch {
+      return false;
+    }
+  };
 
   // Get user's balance for current chain
-  const { data: balance, isLoading: balanceLoading, error: balanceError } = useBalance({
+  const { data: balance, isLoading: balanceLoading, error: balanceError, refetch: refetchBalance } = useBalance({
     address: address,
     chainId: chainId,
+    query: {
+      retry: 3,
+      retryDelay: 1000,
+    }
   });
+
+  // Gas estimation
+  const { data: gasEstimate, isLoading: gasLoading } = useEstimateGas({
+    to: recipientAddress as `0x${string}`,
+    value: amount ? parseEther(amount) : undefined,
+    query: {
+      enabled: isValidAddress() && !!amount && parseFloat(amount) > 0,
+      retry: 2,
+    }
+  });
+
+  const { data: gasPrice } = useGasPrice({
+    chainId: chainId,
+    query: {
+      retry: 2,
+    }
+  });
+
+  // Calculate estimated gas fee
+  const estimatedGasFee = gasEstimate && gasPrice 
+    ? formatEther(gasEstimate * gasPrice)
+    : null;
+
+  // Calculate total cost (amount + gas fee)
+  const totalCost = amount && estimatedGasFee 
+    ? (parseFloat(amount) + parseFloat(estimatedGasFee)).toString()
+    : null;
 
   // Transaction hooks
   const { 
@@ -68,6 +121,12 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     error: confirmError
   } = useWaitForTransactionReceipt({
     hash,
+    timeout: 60000, // 60 second timeout
+    query: {
+      enabled: !!hash,
+      retry: 5,
+      retryDelay: 2000,
+    }
   });
 
   // Reset transaction state when modal opens
@@ -75,21 +134,53 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     resetSendTransaction();
     setStep('form');
     setError(null);
-  }, [resetSendTransaction]);
+    
+    // Try to refetch balance when modal opens
+    if (refetchBalance) {
+      refetchBalance();
+    }
+  }, [resetSendTransaction, refetchBalance]);
+
+  // Clear timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [timeoutId]);
 
   // Handle transaction lifecycle
   useEffect(() => {
     if (isSending) {
       setStep('confirming');
       setError(null);
+      
+      // Set a timeout for confirming state (in case user never confirms/rejects)
+      const timeout = setTimeout(() => {
+        if (step === 'confirming') {
+          setError('Transaction confirmation timed out. Please try again.');
+          setStep('error');
+        }
+      }, 60000); // 60 seconds
+      
+      setTimeoutId(timeout);
     }
   }, [isSending]);
 
   useEffect(() => {
-    if (hash && !isConfirming && !isConfirmed && !isConfirmError) {
-      setStep('pending');
+    if (hash) {
+      // Clear the confirming timeout since we have a hash
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        setTimeoutId(null);
+      }
+      
+      if (!isConfirming && !isConfirmed && !isConfirmError) {
+        setStep('pending');
+      }
     }
-  }, [hash, isConfirming, isConfirmed, isConfirmError]);
+  }, [hash, isConfirming, isConfirmed, isConfirmError, timeoutId]);
 
   useEffect(() => {
     if (isConfirmed && hash) {
@@ -105,7 +196,10 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
         from: address!,
         recipientName: recipientUser?.name || 'Unknown',
         senderName: currentUser?.name || 'You',
-        status: 'confirmed'
+        status: 'confirmed',
+        comment: message.trim() || undefined,
+        gasUsed: gasEstimate?.toString(),
+        gasFee: estimatedGasFee || undefined,
       };
 
       if (onTransactionSent) {
@@ -117,7 +211,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
         onClose();
       }, 3000);
     }
-  }, [isConfirmed, hash, recipientAddress, amount, chainId, address, recipientUser, currentUser, onTransactionSent, onClose]);
+  }, [isConfirmed, hash, recipientAddress, amount, chainId, address, recipientUser, currentUser, onTransactionSent, onClose, message, gasEstimate, estimatedGasFee]);
 
   useEffect(() => {
     if (sendError || isConfirmError) {
@@ -127,15 +221,24 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       // Parse common error messages
       if (errorMessage.includes('insufficient funds')) {
         setError('Insufficient funds for this transaction');
-      } else if (errorMessage.includes('user rejected')) {
-        setError('Transaction was cancelled');
+      } else if (errorMessage.includes('user rejected') || errorMessage.includes('User denied')) {
+        setError('Transaction was cancelled by user');
       } else if (errorMessage.includes('gas')) {
         setError('Transaction failed due to gas issues');
+      } else if (errorMessage.includes('network')) {
+        setError('Network error. Please check your connection and try again.');
       } else {
-        setError(errorMessage);
+        // Simplify complex error messages
+        setError('Transaction failed. Please try again.');
+      }
+      
+      // Clear any pending timeouts
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+        setTimeoutId(null);
       }
     }
-  }, [sendError, isConfirmError, confirmError]);
+  }, [sendError, isConfirmError, confirmError, timeoutId]);
 
   // Network information
   const getNetworkInfo = (chainId: number) => {
@@ -199,24 +302,8 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
   const networkInfo = getNetworkInfo(chainId);
 
-  // Validation
-  const isValidAmount = () => {
-    try {
-      const parsedAmount = parseFloat(amount);
-      if (parsedAmount <= 0) return false;
-      if (!balance) return false;
-      return parsedAmount <= parseFloat(balance.formatted);
-    } catch {
-      return false;
-    }
-  };
-
-  const isValidAddress = () => {
-    return isAddress(recipientAddress);
-  };
-
   const canSubmit = () => {
-    return isValidAmount() && isValidAddress() && !isSending && !balanceLoading;
+    return isValidAmount() && isValidAddress() && !isSending && !balanceLoading && balance;
   };
 
   // Handle form submission
@@ -225,13 +312,19 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
     try {
       setError(null);
+      console.log('Sending transaction:', {
+        to: recipientAddress,
+        value: parseEther(amount),
+        chainId
+      });
+      
       sendTransaction({
         to: recipientAddress as `0x${string}`,
         value: parseEther(amount),
       });
     } catch (err) {
       console.error('Transaction error:', err);
-      setError('Failed to send transaction');
+      setError('Failed to initiate transaction');
       setStep('error');
     }
   };
@@ -252,6 +345,13 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     }
   };
 
+  // Retry balance fetch
+  const retryBalance = () => {
+    if (refetchBalance) {
+      refetchBalance();
+    }
+  };
+
   // Create block explorer URL
   const getExplorerUrl = () => {
     if (!hash || !networkInfo.explorerUrl) return null;
@@ -260,12 +360,25 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
   // Handle close with confirmation if transaction is in progress
   const handleClose = () => {
-    if (step === 'confirming' || step === 'pending') {
+    if (step === 'confirming') {
       const shouldClose = window.confirm(
-        'Transaction is in progress. Are you sure you want to close this window? You can check the transaction status in your wallet.'
+        'Are you sure you want to close? The transaction request may still be pending in your wallet.'
       );
       if (!shouldClose) return;
     }
+    
+    if (step === 'pending') {
+      const shouldClose = window.confirm(
+        'Transaction is being processed on the blockchain. Are you sure you want to close? You can check the status using the transaction hash.'
+      );
+      if (!shouldClose) return;
+    }
+    
+    // Clear any timeouts
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    
     onClose();
   };
 
@@ -292,7 +405,21 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
               {/* Balance Error */}
               {balanceError && (
                 <div className="error-message">
-                  Failed to load balance. Please check your network connection.
+                  Failed to load balance. 
+                  <button 
+                    onClick={retryBalance}
+                    style={{ 
+                      marginLeft: '10px', 
+                      background: '#50b458', 
+                      border: 'none', 
+                      color: 'white', 
+                      padding: '4px 8px', 
+                      borderRadius: '4px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Retry
+                  </button>
                 </div>
               )}
 
@@ -344,7 +471,12 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                 </div>
                 {amount && !isValidAmount() && (
                   <span className="error-text">
-                    {parseFloat(amount) <= 0 ? 'Amount must be greater than 0' : 'Insufficient balance'}
+                    {parseFloat(amount) <= 0 
+                      ? 'Amount must be greater than 0' 
+                      : totalCost && parseFloat(totalCost) > parseFloat(balance?.formatted || '0')
+                        ? 'Insufficient balance (including gas fees)'
+                        : 'Insufficient balance'
+                    }
                   </span>
                 )}
               </div>
@@ -368,15 +500,54 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
               {/* Message (optional) */}
               <div className="form-group">
-                <label>Message (optional)</label>
+                <label>Comment (optional)</label>
                 <textarea
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
-                  placeholder="What's this for?"
+                  placeholder="What's this transaction for?"
                   maxLength={200}
                   rows={3}
                 />
+                <div style={{ fontSize: '12px', color: '#ccc', textAlign: 'right', marginTop: '4px' }}>
+                  {message.length}/200
+                </div>
               </div>
+
+              {/* Transaction Summary */}
+              {amount && parseFloat(amount) > 0 && (
+                <div className="transaction-summary">
+                  <h4>Transaction Summary</h4>
+                  <div className="summary-row">
+                    <span>Amount to send:</span>
+                    <span>{amount} {networkInfo.symbol}</span>
+                  </div>
+                  {estimatedGasFee && (
+                    <div className="summary-row">
+                      <span>Estimated gas fee:</span>
+                      <span className="gas-fee">
+                        {parseFloat(estimatedGasFee).toFixed(6)} {networkInfo.symbol}
+                      </span>
+                    </div>
+                  )}
+                  {gasLoading && (
+                    <div className="summary-row">
+                      <span>Estimating gas fee...</span>
+                      <span className="gas-loading">⏳</span>
+                    </div>
+                  )}
+                  {totalCost && (
+                    <div className="summary-row total">
+                      <span><strong>Total cost:</strong></span>
+                      <span><strong>{parseFloat(totalCost).toFixed(6)} {networkInfo.symbol}</strong></span>
+                    </div>
+                  )}
+                  {amount && !isValidAmount() && totalCost && (
+                    <div className="summary-warning">
+                      ⚠️ Insufficient balance for total cost including gas fees
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Network Info */}
               <div className="network-info">
@@ -499,6 +670,10 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                 setStep('form');
                 setError(null);
                 resetSendTransaction();
+                if (timeoutId) {
+                  clearTimeout(timeoutId);
+                  setTimeoutId(null);
+                }
               }}>
                 Try Again
               </button>

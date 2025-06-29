@@ -1317,6 +1317,102 @@ body {
   margin-top: 16px;
 }
 
+/* Transaction Summary Styles */
+.transaction-summary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.transaction-summary h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: #fff;
+  font-weight: bold;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.summary-row:last-child {
+  margin-bottom: 0;
+}
+
+.summary-row span:first-child {
+  color: #ccc;
+}
+
+.summary-row span:last-child {
+  color: #fff;
+  font-family: monospace;
+}
+
+.summary-row.total {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.gas-fee {
+  color: #ffc107 !important;
+}
+
+.gas-loading {
+  color: #ccc;
+}
+
+.summary-warning {
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* Transaction Message Comment Styles */
+.transaction-comment {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 8px 0;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: #ccc;
+  border-left: 3px solid rgba(80, 180, 88, 0.5);
+}
+
+.comment-label {
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+/* Mobile transaction summary adjustments */
+@media (max-width: 768px) {
+  .transaction-summary {
+    padding: 12px;
+  }
+
+  .summary-row {
+    font-size: 13px;
+  }
+  
+  .summary-warning {
+    font-size: 11px;
+  }
+}
+
 /* Mobile modal adjustments */
 @media (max-width: 768px) {
   .modalOverlay {

@@ -152,6 +152,14 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
           <span className="currency">{networkInfo.symbol}</span>
         </div>
 
+        {/* Comment */}
+        {transaction.comment && transaction.comment.trim() && (
+          <div className="transaction-comment">
+            <div className="comment-label">Comment:</div>
+            {transaction.comment}
+          </div>
+        )}
+
         {/* Network Badge */}
         <div className="transaction-network">
           <div 
@@ -170,6 +178,15 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
               {transaction.hash.slice(0, 8)}...{transaction.hash.slice(-6)}
             </span>
           </div>
+          
+          {transaction.gasFee && parseFloat(transaction.gasFee) > 0 && (
+            <div className="detail-row">
+              <span className="label">Gas Fee:</span>
+              <span className="value">
+                {parseFloat(transaction.gasFee).toFixed(6)} {networkInfo.symbol}
+              </span>
+            </div>
+          )}
           
           {explorerUrl && (
             <div className="transaction-explorer">
