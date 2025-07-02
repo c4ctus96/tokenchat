@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { SlClose } from "react-icons/sl";
 import { IoSend } from "react-icons/io5";
-import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, useChainId, useEstimateGas, useGasPrice } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, useChainId, useEstimateGas, useGasPrice, usePublicClient } from "wagmi";
 import { parseEther, isAddress, formatEther } from "viem";
 import { useUser } from "./UserContext";
 import EthProfilePic from "./EthProfilePic";
@@ -40,6 +40,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
   const { address } = useAccount();
   const { currentUser } = useUser();
   const chainId = useChainId();
+  const publicClient = usePublicClient();
   
   // Transaction form state
   const [amount, setAmount] = useState("");
@@ -336,12 +337,58 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     setAmount(quickAmount);
   };
 
-  // Handle max amount
-  const handleMaxAmount = () => {
-    if (balance) {
-      // Leave some gas for the transaction (approximate)
-      const maxAmount = Math.max(0, parseFloat(balance.formatted) - 0.001);
-      setAmount(maxAmount.toString());
+  // Handle max amount with proper gas calculation (similar to web3.js approach)
+  const handleMaxAmount = async () => {
+    if (!balance || !address || !publicClient) return;
+    
+    const balanceValue = parseFloat(balance.formatted);
+
+    try {
+      // Step 1: Get current gas price (equivalent to provider.getGasPrice())
+      const currentGasPrice = gasPrice;
+      if (!currentGasPrice) {
+        alert('Unable to fetch gas price. Please try again in a moment.');
+        return;
+      }
+
+      // Step 2: Estimate gas for a small transaction (equivalent to provider.estimateGas(tx))
+      const testAmount = parseEther("0.001"); // Small test amount for gas estimation
+      
+      const gasEstimate = await publicClient.estimateGas({
+        account: address,
+        to: recipientAddress as `0x${string}`,
+        value: testAmount,
+      });
+
+      // Step 3: Calculate transaction fee (equivalent to gasEstimate.mul(gasPrice))
+      const txFee = gasEstimate * currentGasPrice;
+      const txFeeInEther = formatEther(txFee);
+      const txFeeValue = parseFloat(txFeeInEther);
+
+      // Step 4: Calculate max sendable amount (equivalent to userBalance.sub(txFee))
+      const maxSendableAmount = balanceValue - txFeeValue;
+
+      // Check if there's enough left after gas
+      if (maxSendableAmount <= 0) {
+        alert(`Insufficient balance for transaction.\n\nBalance: ${balanceValue} ${networkInfo.symbol}\nEstimated gas fee: ${txFeeValue.toFixed(8)} ${networkInfo.symbol}\n\nYou need more ${networkInfo.symbol} to cover gas fees.`);
+        return;
+      }
+
+      // Use higher precision for small amounts
+      const precision = maxSendableAmount < 0.01 ? 8 : 6;
+      setAmount(maxSendableAmount.toFixed(precision));
+
+      console.log('Max calculation:', {
+        balance: balanceValue,
+        gasEstimate: gasEstimate.toString(),
+        gasPrice: currentGasPrice.toString(),
+        txFee: txFeeValue,
+        maxSendable: maxSendableAmount
+      });
+
+    } catch (error) {
+      console.error('Error calculating max amount:', error);
+      alert('Unable to calculate max amount. Please enter amount manually.');
     }
   };
 
@@ -565,7 +612,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                 disabled={!canSubmit()}
               >
                 <IoSend size={18} />
-                Send {amount || '0'} {networkInfo.symbol}
+                Send
               </button>
             </div>
           </>
