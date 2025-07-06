@@ -337,22 +337,24 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     setAmount(quickAmount);
   };
 
-  // Handle max amount with proper gas calculation (similar to web3.js approach)
+  // Handle max amount with proper gas calculation + safety buffer (MetaMask approach)
   const handleMaxAmount = async () => {
     if (!balance || !address || !publicClient) return;
     
     const balanceValue = parseFloat(balance.formatted);
 
     try {
-      // Step 1: Get current gas price (equivalent to provider.getGasPrice())
+      // Step 1: Get current gas price
       const currentGasPrice = gasPrice;
       if (!currentGasPrice) {
         alert('Unable to fetch gas price. Please try again in a moment.');
         return;
       }
 
-      // Step 2: Estimate gas for a small transaction (equivalent to provider.estimateGas(tx))
-      const testAmount = parseEther("0.001"); // Small test amount for gas estimation
+      // Step 2: Estimate gas for a small transaction
+      // Use a very small amount or 1% of balance, whichever is smaller
+      const testAmountValue = Math.min(0.0001, balanceValue * 0.01);
+      const testAmount = parseEther(testAmountValue.toString());
       
       const gasEstimate = await publicClient.estimateGas({
         account: address,
@@ -360,30 +362,39 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
         value: testAmount,
       });
 
-      // Step 3: Calculate transaction fee (equivalent to gasEstimate.mul(gasPrice))
-      const txFee = gasEstimate * currentGasPrice;
+      // Step 3: Apply MetaMask-style safety buffer
+      // Add 20% buffer to gas estimate to account for estimation inaccuracies
+      const gasWithBuffer = gasEstimate * BigInt(120) / BigInt(100); // 20% increase
+      
+      // Step 4: Calculate transaction fee with buffer
+      const txFee = gasWithBuffer * currentGasPrice;
       const txFeeInEther = formatEther(txFee);
       const txFeeValue = parseFloat(txFeeInEther);
 
-      // Step 4: Calculate max sendable amount (equivalent to userBalance.sub(txFee))
+      // Step 5: Calculate max sendable amount
       const maxSendableAmount = balanceValue - txFeeValue;
 
       // Check if there's enough left after gas
       if (maxSendableAmount <= 0) {
-        alert(`Insufficient balance for transaction.\n\nBalance: ${balanceValue} ${networkInfo.symbol}\nEstimated gas fee: ${txFeeValue.toFixed(8)} ${networkInfo.symbol}\n\nYou need more ${networkInfo.symbol} to cover gas fees.`);
+        alert(`Insufficient balance for transaction.\n\nBalance: ${balanceValue} ${networkInfo.symbol}\nEstimated gas fee (with buffer): ${txFeeValue.toFixed(8)} ${networkInfo.symbol}\n\nYou need more ${networkInfo.symbol} to cover gas fees.`);
         return;
       }
 
-      // Use higher precision for small amounts
-      const precision = maxSendableAmount < 0.01 ? 8 : 6;
-      setAmount(maxSendableAmount.toFixed(precision));
+      // Additional safety check: ensure result doesn't exceed balance
+      const finalAmount = Math.min(maxSendableAmount, balanceValue * 0.99); // Never use more than 99% of balance
 
-      console.log('Max calculation:', {
+      // Use higher precision for small amounts
+      const precision = finalAmount < 0.01 ? 8 : 6;
+      setAmount(finalAmount.toFixed(precision));
+
+      console.log('Max calculation with MetaMask approach:', {
         balance: balanceValue,
         gasEstimate: gasEstimate.toString(),
+        gasWithBuffer: gasWithBuffer.toString(),
         gasPrice: currentGasPrice.toString(),
         txFee: txFeeValue,
-        maxSendable: maxSendableAmount
+        maxSendable: maxSendableAmount,
+        finalAmount: finalAmount
       });
 
     } catch (error) {
