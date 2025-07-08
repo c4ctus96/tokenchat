@@ -124,6 +124,8 @@ body {
   display: flex;
   flex-direction: column;
   flex: 1;
+  height: 100vh;
+  overflow: hidden;
   background: rgb(83,0,154);
   background: radial-gradient(circle, rgba(83,0,154,1) 0%, rgba(0,0,0,1) 77%);
 }
@@ -162,6 +164,7 @@ body {
   height: 100vh;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .mobile-chat-selector {
@@ -252,6 +255,7 @@ body {
   width: 400px;
   padding: 0;
   overflow-y: auto;
+  flex-shrink: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
@@ -356,6 +360,7 @@ body {
   flex-direction: column;
   width: 100%;
   height: 100vh;
+  overflow: hidden;
   background: rgb(83,0,154);
   background: radial-gradient(circle, rgba(83,0,154,1) 0%, rgba(0,0,0,1) 77%);
 }
@@ -363,7 +368,7 @@ body {
 /* Mobile chat window adjustments */
 @media (max-width: 768px) {
   .mobile-chat-window .chatWindow {
-    height: calc(100vh - 70px); /* Account for header */
+    height: 100vh;
   }
 }
 
@@ -376,10 +381,12 @@ body {
   flex-direction: column;
   width: 100%;
   flex: 1;
+  min-height: 0; /* Critical: allows flex child to shrink below content size */
   padding: 16px;
   padding-right: 8px;
   gap: 12px;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
 }
@@ -759,7 +766,7 @@ body {
 
 /* Desktop create chat button */
 .desktop-create-chat {
-  left: 85px;
+  left: 20px;
   bottom: 20px;
   height: 50px;
   width: 50px;
