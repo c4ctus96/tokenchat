@@ -48,7 +48,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
   const [message, setMessage] = useState("");
   const [step, setStep] = useState<'form' | 'confirming' | 'pending' | 'success' | 'error'>('form');
   const [error, setError] = useState<string | null>(null);
-  const [timeoutId, setTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [timeoutId, setTimeoutId] = useState<number | null>(null);
 
   // Helper functions (declared early to avoid hoisting issues)
   const isValidAddress = () => {
@@ -163,7 +163,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
           setError('Transaction confirmation timed out. Please try again.');
           setStep('error');
         }
-      }, 60000); // 60 seconds
+      }, 60000) as number; // 60 seconds
       
       setTimeoutId(timeout);
     }
@@ -362,9 +362,9 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
         value: testAmount,
       });
 
-      // Step 3: Apply MetaMask-style safety buffer
-      // Add 20% buffer to gas estimate to account for estimation inaccuracies
-      const gasWithBuffer = gasEstimate * BigInt(120) / BigInt(100); // 20% increase
+      // Step 3: Apply MetaMask-style safety buffer  
+      // GitHub issue shows MetaMask uses 1.5x the estimate (50% increase)
+      const gasWithBuffer = gasEstimate * BigInt(150) / BigInt(100); // 50% increase (1.5x)
       
       // Step 4: Calculate transaction fee with buffer
       const txFee = gasWithBuffer * currentGasPrice;
@@ -387,7 +387,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       const precision = finalAmount < 0.01 ? 8 : 6;
       setAmount(finalAmount.toFixed(precision));
 
-      console.log('Max calculation with MetaMask approach:', {
+      console.log('Max calculation with MetaMask 1.5x approach:', {
         balance: balanceValue,
         gasEstimate: gasEstimate.toString(),
         gasWithBuffer: gasWithBuffer.toString(),
