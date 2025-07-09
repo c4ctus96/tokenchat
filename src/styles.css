@@ -25,6 +25,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
   flex-direction: column;
   padding: 20px;
 }
@@ -108,7 +109,9 @@ body {
 
 .chat {
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   width: 100vw;
+  width: 100dvw; /* Dynamic viewport width for mobile */
   display: flex;
   margin: 0;
   padding: 0;
@@ -125,6 +128,7 @@ body {
   flex-direction: column;
   flex: 1;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   overflow: hidden;
   background: rgb(83,0,154);
   background: radial-gradient(circle, rgba(83,0,154,1) 0%, rgba(0,0,0,1) 77%);
@@ -162,6 +166,7 @@ body {
 .mobile-chat-window {
   width: 100%;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -252,6 +257,7 @@ body {
 .chatSelector {
   background-color: #001122;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   width: 400px;
   padding: 0;
   overflow-y: auto;
@@ -360,6 +366,7 @@ body {
   flex-direction: column;
   width: 100%;
   height: 100vh;
+  height: 100dvh; /* Dynamic viewport height for mobile */
   overflow: hidden;
   background: rgb(83,0,154);
   background: radial-gradient(circle, rgba(83,0,154,1) 0%, rgba(0,0,0,1) 77%);
@@ -369,6 +376,7 @@ body {
 @media (max-width: 768px) {
   .mobile-chat-window .chatWindow {
     height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile */
   }
 }
 
@@ -766,7 +774,7 @@ body {
 
 /* Desktop create chat button */
 .desktop-create-chat {
-  left: 20px;
+  left: 85px;
   bottom: 20px;
   height: 50px;
   width: 50px;
@@ -919,6 +927,7 @@ body {
   align-items: center;
   justify-content: center;
   min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
   padding: 20px;
   text-align: center;
 }
