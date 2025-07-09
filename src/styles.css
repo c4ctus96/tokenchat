@@ -390,9 +390,9 @@ body {
   width: 100%;
   flex: 1;
   min-height: 0; /* Critical: allows flex child to shrink below content size */
-  padding: 16px;
+  padding: 5px;
   padding-right: 8px;
-  gap: 12px;
+  gap: 6px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -417,15 +417,15 @@ body {
    ============================================================================= */
 
 .message {
-  padding: 12px 16px;
-  border-radius: 20px;
+  padding: 8px 10px;
+  border-radius: 15px;
   max-width: 75%;
   word-wrap: break-word;
   font-family: 'Beep-Bold';
   align-self: flex-start;
   background-color: #2c254b;
   color: #fff;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
 }
 
 .message.own {
@@ -602,7 +602,7 @@ body {
 @media (max-width: 768px) {
   .message {
     max-width: 85%;
-    padding: 10px 14px;
+    padding: 5px 7px;
     border-radius: 18px;
   }
   
