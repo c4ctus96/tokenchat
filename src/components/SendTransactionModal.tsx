@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { SlClose } from "react-icons/sl";
 import { IoSend } from "react-icons/io5";
-import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, useChainId, useEstimateGas, useGasPrice, usePublicClient } from "wagmi";
+import { useAccount, useBalance, useSendTransaction, useWaitForTransactionReceipt, useEstimateGas, useGasPrice, usePublicClient } from "wagmi";
 import { parseEther, isAddress, formatEther } from "viem";
 import { useUser } from "./UserContext";
 import EthProfilePic from "./EthProfilePic";
+import { getNetworkInfo, NetworkInfo } from "../utils/networks";
+import { useChainListener } from "../hooks/useChainListener";
 import "../styles.css";
 
 interface SendTransactionModalProps {
@@ -39,8 +41,18 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 }) => {
   const { address } = useAccount();
   const { currentUser } = useUser();
-  const chainId = useChainId();
+  const chainId = useChainListener(); // Use our enhanced hook
   const publicClient = usePublicClient();
+  
+  // Network information state with loading indicator
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({
+    name: 'Loading...',
+    symbol: 'ETH',
+    color: '#666666',
+    explorerUrl: null,
+    decimals: 18
+  });
+  const [networkLoading, setNetworkLoading] = useState(true);
   
   // Transaction form state
   const [amount, setAmount] = useState("");
@@ -69,28 +81,29 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     }
   };
 
-  // Get user's balance for current chain
+  // Get user's balance for current chain with forced refresh on chain change
   const { data: balance, isLoading: balanceLoading, error: balanceError, refetch: refetchBalance } = useBalance({
     address: address,
-    chainId: chainId,
+    chainId: chainId, // Use our enhanced chainId
     query: {
       retry: 3,
       retryDelay: 1000,
     }
   });
 
-  // Gas estimation
-  const { data: gasEstimate, isLoading: gasLoading } = useEstimateGas({
+  // Gas estimation with our enhanced chainId
+  const { data: gasEstimate, isLoading: gasLoading, refetch: refetchGasEstimate } = useEstimateGas({
     to: recipientAddress as `0x${string}`,
     value: amount ? parseEther(amount) : undefined,
+    chainId: chainId, // Use our enhanced chainId
     query: {
       enabled: isValidAddress() && !!amount && parseFloat(amount) > 0,
       retry: 2,
     }
   });
 
-  const { data: gasPrice } = useGasPrice({
-    chainId: chainId,
+  const { data: gasPrice, refetch: refetchGasPrice } = useGasPrice({
+    chainId: chainId, // Use our enhanced chainId
     query: {
       retry: 2,
     }
@@ -129,6 +142,177 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       retryDelay: 2000,
     }
   });
+
+  // Load network information when chain changes
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadNetworkInfo = async () => {
+      console.log("SendTransactionModal: Loading network info for chain ID:", chainId);
+      setNetworkLoading(true);
+      
+      try {
+        const info = await getNetworkInfo(chainId);
+        
+        if (isMounted) {
+          console.log("SendTransactionModal: Network info loaded:", info);
+          setNetworkInfo(info);
+        }
+      } catch (error) {
+        console.error("SendTransactionModal: Failed to load network info for chain", chainId, ":", error);
+        
+        if (isMounted) {
+          // Fallback network info
+          let fallbackInfo: NetworkInfo = {
+            name: `Chain ${chainId}`,
+            symbol: 'ETH',
+            color: '#666666',
+            explorerUrl: null,
+            decimals: 18
+          };
+          
+          // Special handling for known chains that might fail API lookup
+          if (chainId === 43114) {
+            fallbackInfo = {
+              name: 'Avalanche',
+              symbol: 'AVAX',
+              color: '#E84142',
+              explorerUrl: 'https://snowscan.xyz',
+              decimals: 18
+            };
+          } else if (chainId === 56) {
+            fallbackInfo = {
+              name: 'BNB Smart Chain',
+              symbol: 'BNB',
+              color: '#F3BA2F',
+              explorerUrl: 'https://bscscan.com',
+              decimals: 18
+            };
+          } else if (chainId === 137) {
+            fallbackInfo = {
+              name: 'Polygon',
+              symbol: 'MATIC',
+              color: '#8247E5',
+              explorerUrl: 'https://polygonscan.com',
+              decimals: 18
+            };
+          }
+          
+          console.log("SendTransactionModal: Using fallback network info:", fallbackInfo);
+          setNetworkInfo(fallbackInfo);
+        }
+      } finally {
+        if (isMounted) {
+          setNetworkLoading(false);
+        }
+      }
+    };
+
+    loadNetworkInfo();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [chainId]);
+
+  // Force refresh wagmi hooks when chainId from our hook changes
+  useEffect(() => {
+    console.log("SendTransactionModal: chainId changed to", chainId, "- refreshing wagmi hooks");
+    
+    // Force refresh all wagmi hooks when our enhanced chainId changes
+    if (refetchBalance) {
+      console.log("SendTransactionModal: Refetching balance for chain", chainId);
+      refetchBalance().catch(console.warn);
+    }
+    if (refetchGasEstimate) {
+      console.log("SendTransactionModal: Refetching gas estimate for chain", chainId);
+      refetchGasEstimate().catch(console.warn);
+    }
+    if (refetchGasPrice) {
+      console.log("SendTransactionModal: Refetching gas price for chain", chainId);
+      refetchGasPrice().catch(console.warn);
+    }
+  }, [chainId, refetchBalance, refetchGasEstimate, refetchGasPrice]);
+
+  // Listen for network changes and force refresh ALL wagmi hooks
+  useEffect(() => {
+    const handleChainChanged = (newChainId: string) => {
+      const newChainIdNumber = parseInt(newChainId, 16);
+      console.log("SendTransactionModal: Chain changed event detected, new chain:", newChainIdNumber);
+      
+      // Force refresh network info immediately
+      setNetworkLoading(true);
+      
+      // Force refresh ALL wagmi hooks data
+      console.log("SendTransactionModal: Refreshing all wagmi hooks for new chain");
+      
+      // Refresh balance, gas estimate, and gas price
+      if (refetchBalance) {
+        refetchBalance().catch(console.warn);
+      }
+      if (refetchGasEstimate) {
+        refetchGasEstimate().catch(console.warn);
+      }
+      if (refetchGasPrice) {
+        refetchGasPrice().catch(console.warn);
+      }
+      
+      // Clear any cached data for immediate refresh
+      getNetworkInfo(newChainIdNumber).then(info => {
+        console.log("SendTransactionModal: Network info refreshed after chain change:", info);
+        setNetworkInfo(info);
+        setNetworkLoading(false);
+      }).catch(error => {
+        console.error("SendTransactionModal: Failed to refresh network info after chain change:", error);
+        
+        // Enhanced fallback for known chains
+        let fallbackInfo: NetworkInfo = {
+          name: `Chain ${newChainIdNumber}`,
+          symbol: 'ETH',
+          color: '#666666',
+          explorerUrl: null,
+          decimals: 18
+        };
+
+        if (newChainIdNumber === 43114) {
+          fallbackInfo = {
+            name: 'Avalanche',
+            symbol: 'AVAX',
+            color: '#E84142',
+            explorerUrl: 'https://snowscan.xyz',
+            decimals: 18
+          };
+        } else if (newChainIdNumber === 56) {
+          fallbackInfo = {
+            name: 'BNB Smart Chain',
+            symbol: 'BNB',
+            color: '#F3BA2F',
+            explorerUrl: 'https://bscscan.com',
+            decimals: 18
+          };
+        } else if (newChainIdNumber === 137) {
+          fallbackInfo = {
+            name: 'Polygon',
+            symbol: 'MATIC',
+            color: '#8247E5',
+            explorerUrl: 'https://polygonscan.com',
+            decimals: 18
+          };
+        }
+        
+        setNetworkInfo(fallbackInfo);
+        setNetworkLoading(false);
+      });
+    };
+
+    if (typeof window !== 'undefined' && window.ethereum) {
+      window.ethereum.on?.('chainChanged', handleChainChanged);
+      
+      return () => {
+        window.ethereum.removeListener?.('chainChanged', handleChainChanged);
+      };
+    }
+  }, [refetchBalance, refetchGasEstimate, refetchGasPrice]);
 
   // Reset transaction state when modal opens
   useEffect(() => {
@@ -241,70 +425,8 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     }
   }, [sendError, isConfirmError, confirmError, timeoutId]);
 
-  // Network information
-  const getNetworkInfo = (chainId: number) => {
-    switch (chainId) {
-      case 1: return { 
-        name: 'Ethereum Mainnet', 
-        symbol: 'ETH', 
-        color: '#627EEA',
-        explorerUrl: 'https://etherscan.io'
-      };
-      case 56: return { 
-        name: 'BNB Smart Chain', 
-        symbol: 'BNB', 
-        color: '#F3BA2F',
-        explorerUrl: 'https://bscscan.com'
-      };
-      case 137: return { 
-        name: 'Polygon', 
-        symbol: 'MATIC', 
-        color: '#8247E5',
-        explorerUrl: 'https://polygonscan.com'
-      };
-      case 42161: return { 
-        name: 'Arbitrum One', 
-        symbol: 'ETH', 
-        color: '#28A0F0',
-        explorerUrl: 'https://arbiscan.io'
-      };
-      case 10: return { 
-        name: 'Optimism', 
-        symbol: 'ETH', 
-        color: '#FF0420',
-        explorerUrl: 'https://optimistic.etherscan.io'
-      };
-      case 8453: return { 
-        name: 'Base', 
-        symbol: 'ETH', 
-        color: '#0052FF',
-        explorerUrl: 'https://basescan.org'
-      };
-      case 43114: return { 
-        name: 'Avalanche C-Chain', 
-        symbol: 'AVAX', 
-        color: '#E84142',
-        explorerUrl: 'https://snowtrace.io'
-      };
-      case 250: return { 
-        name: 'Fantom Opera', 
-        symbol: 'FTM', 
-        color: '#1969FF',
-        explorerUrl: 'https://ftmscan.com'
-      };
-      default: return { 
-        name: `Chain ${chainId}`, 
-        symbol: 'ETH', 
-        color: '#666',
-        explorerUrl: null
-      };
-    }
-  };
-
-  const networkInfo = getNetworkInfo(chainId);
-
   const canSubmit = () => {
-    return isValidAmount() && isValidAddress() && !isSending && !balanceLoading && balance;
+    return isValidAmount() && isValidAddress() && !isSending && !balanceLoading && balance && !networkLoading;
   };
 
   // Handle form submission
@@ -483,7 +605,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
               {/* Amount Input */}
               <div className="form-group">
-                <label>Amount ({networkInfo.symbol})</label>
+                <label>Amount ({networkLoading ? 'Loading...' : networkInfo.symbol})</label>
                 <div className="amount-input-group">
                   <input
                     type="number"
@@ -577,13 +699,13 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                   <h4>Transaction Summary</h4>
                   <div className="summary-row">
                     <span>Amount to send:</span>
-                    <span>{amount} {networkInfo.symbol}</span>
+                    <span>{amount} {networkLoading ? 'Loading...' : networkInfo.symbol}</span>
                   </div>
                   {estimatedGasFee && (
                     <div className="summary-row">
                       <span>Estimated gas fee:</span>
                       <span className="gas-fee">
-                        {parseFloat(estimatedGasFee).toFixed(6)} {networkInfo.symbol}
+                        {parseFloat(estimatedGasFee).toFixed(6)} {networkLoading ? 'Loading...' : networkInfo.symbol}
                       </span>
                     </div>
                   )}
@@ -596,7 +718,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                   {totalCost && (
                     <div className="summary-row total">
                       <span><strong>Total cost:</strong></span>
-                      <span><strong>{parseFloat(totalCost).toFixed(6)} {networkInfo.symbol}</strong></span>
+                      <span><strong>{parseFloat(totalCost).toFixed(6)} {networkLoading ? 'Loading...' : networkInfo.symbol}</strong></span>
                     </div>
                   )}
                   {amount && !isValidAmount() && totalCost && (
@@ -609,7 +731,14 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
               {/* Network Info */}
               <div className="network-info">
-                <span>Sending on {networkInfo.name}</span>
+                <span>
+                  Sending on {networkLoading ? 'Loading network...' : networkInfo.name}
+                  {chainId && !networkLoading && (
+                    <span style={{ opacity: 0.7, fontSize: '12px', marginLeft: '8px' }}>
+                      (Chain {chainId})
+                    </span>
+                  )}
+                </span>
               </div>
             </div>
 
@@ -748,7 +877,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     <div className="modalOverlay">
       <div className="modalContent transaction-modal">
         <div className="modal-header">
-          <h2>Send {networkInfo.symbol}</h2>
+          <h2>Send {networkLoading ? 'Loading...' : networkInfo.symbol}</h2>
           {(step === 'form' || step === 'error') && (
             <button 
               className="closeButton" 

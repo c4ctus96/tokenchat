@@ -1,6 +1,7 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { IoSend, IoCheckmark, IoClose, IoTime } from "react-icons/io5";
 import { TransactionData } from "./SendTransactionModal";
+import { getNetworkInfo, NetworkInfo } from "../utils/networks";
 import "../styles.css";
 
 interface TransactionMessageProps {
@@ -14,67 +15,135 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
   own, 
   timeStamp 
 }) => {
-  // Get network name and symbol
-  const getNetworkInfo = (chainId: number) => {
-    switch (chainId) {
-      case 1: return { 
-        name: 'Ethereum', 
-        symbol: 'ETH', 
-        color: '#627EEA',
-        explorerUrl: 'https://etherscan.io'
-      };
-      case 56: return { 
-        name: 'BSC', 
-        symbol: 'BNB', 
-        color: '#F3BA2F',
-        explorerUrl: 'https://bscscan.com'
-      };
-      case 137: return { 
-        name: 'Polygon', 
-        symbol: 'MATIC', 
-        color: '#8247E5',
-        explorerUrl: 'https://polygonscan.com'
-      };
-      case 42161: return { 
-        name: 'Arbitrum', 
-        symbol: 'ETH', 
-        color: '#28A0F0',
-        explorerUrl: 'https://arbiscan.io'
-      };
-      case 10: return { 
-        name: 'Optimism', 
-        symbol: 'ETH', 
-        color: '#FF0420',
-        explorerUrl: 'https://optimistic.etherscan.io'
-      };
-      case 8453: return { 
-        name: 'Base', 
-        symbol: 'ETH', 
-        color: '#0052FF',
-        explorerUrl: 'https://basescan.org'
-      };
-      case 43114: return { 
-        name: 'Avalanche', 
-        symbol: 'AVAX', 
-        color: '#E84142',
-        explorerUrl: 'https://snowtrace.io'
-      };
-      case 250: return { 
-        name: 'Fantom', 
-        symbol: 'FTM', 
-        color: '#1969FF',
-        explorerUrl: 'https://ftmscan.com'
-      };
-      default: return { 
-        name: 'Unknown', 
-        symbol: 'ETH', 
-        color: '#666',
-        explorerUrl: null
-      };
-    }
-  };
+  const [networkInfo, setNetworkInfo] = useState<NetworkInfo>({
+    name: 'Loading...',
+    symbol: 'ETH',
+    color: '#666666',
+    explorerUrl: null,
+    decimals: 18
+  });
+  const [networkLoading, setNetworkLoading] = useState(true);
 
-  const networkInfo = getNetworkInfo(transaction.chainId);
+  // Load network information when component mounts or transaction changes
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadNetworkInfo = async () => {
+      console.log("TransactionMessage: Loading network info for chain", transaction.chainId);
+      setNetworkLoading(true);
+      
+      try {
+        const info = await getNetworkInfo(transaction.chainId);
+        
+        if (isMounted) {
+          console.log("TransactionMessage: Network info loaded:", info);
+          setNetworkInfo(info);
+        }
+      } catch (error) {
+        console.error("TransactionMessage: Failed to load network info:", error);
+        
+        if (isMounted) {
+          // Use fallback based on chainId
+          let fallbackInfo: NetworkInfo = {
+            name: `Chain ${transaction.chainId}`,
+            symbol: 'ETH',
+            color: '#666666',
+            explorerUrl: null,
+            decimals: 18
+          };
+
+          // Enhanced fallback for common chains
+          switch (transaction.chainId) {
+            case 1:
+              fallbackInfo = {
+                name: 'Ethereum',
+                symbol: 'ETH',
+                color: '#627EEA',
+                explorerUrl: 'https://etherscan.io',
+                decimals: 18
+              };
+              break;
+            case 56:
+              fallbackInfo = {
+                name: 'BNB Smart Chain',
+                symbol: 'BNB',
+                color: '#F3BA2F',
+                explorerUrl: 'https://bscscan.com',
+                decimals: 18
+              };
+              break;
+            case 137:
+              fallbackInfo = {
+                name: 'Polygon',
+                symbol: 'MATIC',
+                color: '#8247E5',
+                explorerUrl: 'https://polygonscan.com',
+                decimals: 18
+              };
+              break;
+            case 43114:
+              fallbackInfo = {
+                name: 'Avalanche',
+                symbol: 'AVAX',
+                color: '#E84142',
+                explorerUrl: 'https://snowscan.xyz',
+                decimals: 18
+              };
+              break;
+            case 42161:
+              fallbackInfo = {
+                name: 'Arbitrum One',
+                symbol: 'ETH',
+                color: '#28A0F0',
+                explorerUrl: 'https://arbiscan.io',
+                decimals: 18
+              };
+              break;
+            case 10:
+              fallbackInfo = {
+                name: 'Optimism',
+                symbol: 'ETH',
+                color: '#FF0420',
+                explorerUrl: 'https://optimistic.etherscan.io',
+                decimals: 18
+              };
+              break;
+            case 8453:
+              fallbackInfo = {
+                name: 'Base',
+                symbol: 'ETH',
+                color: '#0052FF',
+                explorerUrl: 'https://basescan.org',
+                decimals: 18
+              };
+              break;
+            case 250:
+              fallbackInfo = {
+                name: 'Fantom',
+                symbol: 'FTM',
+                color: '#1969FF',
+                explorerUrl: 'https://ftmscan.com',
+                decimals: 18
+              };
+              break;
+          }
+          
+          console.log("TransactionMessage: Using fallback network info:", fallbackInfo);
+          setNetworkInfo(fallbackInfo);
+        }
+      } finally {
+        if (isMounted) {
+          setNetworkLoading(false);
+        }
+      }
+    };
+
+    loadNetworkInfo();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [transaction.chainId]);
 
   // Status icon and text
   const getStatusInfo = () => {
@@ -149,7 +218,9 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
           <span className="amount">
             {own ? '-' : '+'}{formatAmount(transaction.amount)}
           </span>
-          <span className="currency">{networkInfo.symbol}</span>
+          <span className="currency">
+            {networkLoading ? '...' : networkInfo.symbol}
+          </span>
         </div>
 
         {/* Comment */}
@@ -166,7 +237,12 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
             className="network-badge"
             style={{ backgroundColor: networkInfo.color }}
           >
-            {networkInfo.name}
+            {networkLoading ? 'Loading...' : networkInfo.name}
+            {transaction.chainId && !networkLoading && (
+              <span style={{ opacity: 0.7, fontSize: '10px', marginLeft: '4px' }}>
+                ({transaction.chainId})
+              </span>
+            )}
           </div>
         </div>
 
@@ -183,12 +259,12 @@ const TransactionMessage: React.FC<TransactionMessageProps> = ({
             <div className="detail-row">
               <span className="label">Gas Fee:</span>
               <span className="value">
-                {parseFloat(transaction.gasFee).toFixed(6)} {networkInfo.symbol}
+                {parseFloat(transaction.gasFee).toFixed(6)} {networkLoading ? '...' : networkInfo.symbol}
               </span>
             </div>
           )}
           
-          {explorerUrl && (
+          {explorerUrl && !networkLoading && (
             <div className="transaction-explorer">
               <a 
                 href={explorerUrl} 
