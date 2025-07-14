@@ -41,7 +41,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 }) => {
   const { address } = useAccount();
   const { currentUser } = useUser();
-  const chainId = useChainListener(); // Use our enhanced hook
+  const chainId = useChainListener();
   const publicClient = usePublicClient();
   
   // Network information state with loading indicator
@@ -62,7 +62,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [timeoutId, setTimeoutId] = useState<number | null>(null);
 
-  // Helper functions (declared early to avoid hoisting issues)
+  // Helper functions
   const isValidAddress = () => {
     return isAddress(recipientAddress);
   };
@@ -71,7 +71,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     try {
       const parsedAmount = parseFloat(amount);
       if (parsedAmount <= 0) return false;
-      if (!balance) return false;
+      if (!balance || balance.value === 0n) return false;
       
       // Check if user has enough balance including gas fees
       const total = totalCost ? parseFloat(totalCost) : parsedAmount;
@@ -81,31 +81,66 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     }
   };
 
-  // Get user's balance for current chain with forced refresh on chain change
-  const { data: balance, isLoading: balanceLoading, error: balanceError, refetch: refetchBalance } = useBalance({
+  // Enhanced balance hook with better error handling
+  const { 
+    data: balance, 
+    isLoading: balanceLoading, 
+    error: balanceError, 
+    refetch: refetchBalance,
+    isRefetching: balanceRefetching 
+  } = useBalance({
     address: address,
-    chainId: chainId, // Use our enhanced chainId
+    chainId: chainId,
     query: {
-      retry: 3,
+      retry: (failureCount, error) => {
+        console.log(`Balance fetch attempt ${failureCount + 1} for chain ${chainId}:`, error?.message);
+        // Only retry network errors, not "unsupported chain" errors
+        if (error?.message?.includes('unsupported') || error?.message?.includes('chain')) {
+          return false;
+        }
+        return failureCount < 2;
+      },
       retryDelay: 1000,
+      refetchOnWindowFocus: false,
     }
   });
 
-  // Gas estimation with our enhanced chainId
-  const { data: gasEstimate, isLoading: gasLoading, refetch: refetchGasEstimate } = useEstimateGas({
+  // Gas estimation with better error handling
+  const { 
+    data: gasEstimate, 
+    isLoading: gasLoading, 
+    error: gasError,
+    refetch: refetchGasEstimate 
+  } = useEstimateGas({
     to: recipientAddress as `0x${string}`,
     value: amount ? parseEther(amount) : undefined,
-    chainId: chainId, // Use our enhanced chainId
+    chainId: chainId,
     query: {
       enabled: isValidAddress() && !!amount && parseFloat(amount) > 0,
-      retry: 2,
+      retry: (failureCount, error) => {
+        console.log(`Gas estimation attempt ${failureCount + 1}:`, error?.message);
+        if (error?.message?.includes('unsupported') || error?.message?.includes('chain')) {
+          return false;
+        }
+        return failureCount < 1;
+      },
     }
   });
 
-  const { data: gasPrice, refetch: refetchGasPrice } = useGasPrice({
-    chainId: chainId, // Use our enhanced chainId
+  const { 
+    data: gasPrice, 
+    error: gasPriceError,
+    refetch: refetchGasPrice 
+  } = useGasPrice({
+    chainId: chainId,
     query: {
-      retry: 2,
+      retry: (failureCount, error) => {
+        console.log(`Gas price fetch attempt ${failureCount + 1}:`, error?.message);
+        if (error?.message?.includes('unsupported') || error?.message?.includes('chain')) {
+          return false;
+        }
+        return failureCount < 1;
+      },
     }
   });
 
@@ -135,7 +170,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     error: confirmError
   } = useWaitForTransactionReceipt({
     hash,
-    timeout: 60000, // 60 second timeout
+    timeout: 60000,
     query: {
       enabled: !!hash,
       retry: 5,
@@ -162,42 +197,8 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
         console.error("SendTransactionModal: Failed to load network info for chain", chainId, ":", error);
         
         if (isMounted) {
-          // Fallback network info
-          let fallbackInfo: NetworkInfo = {
-            name: `Chain ${chainId}`,
-            symbol: 'ETH',
-            color: '#666666',
-            explorerUrl: null,
-            decimals: 18
-          };
-          
-          // Special handling for known chains that might fail API lookup
-          if (chainId === 43114) {
-            fallbackInfo = {
-              name: 'Avalanche',
-              symbol: 'AVAX',
-              color: '#E84142',
-              explorerUrl: 'https://snowscan.xyz',
-              decimals: 18
-            };
-          } else if (chainId === 56) {
-            fallbackInfo = {
-              name: 'BNB Smart Chain',
-              symbol: 'BNB',
-              color: '#F3BA2F',
-              explorerUrl: 'https://bscscan.com',
-              decimals: 18
-            };
-          } else if (chainId === 137) {
-            fallbackInfo = {
-              name: 'Polygon',
-              symbol: 'MATIC',
-              color: '#8247E5',
-              explorerUrl: 'https://polygonscan.com',
-              decimals: 18
-            };
-          }
-          
+          // Enhanced fallback network info
+          const fallbackInfo = getFallbackNetworkInfo(chainId);
           console.log("SendTransactionModal: Using fallback network info:", fallbackInfo);
           setNetworkInfo(fallbackInfo);
         }
@@ -215,26 +216,100 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     };
   }, [chainId]);
 
-  // Force refresh wagmi hooks when chainId from our hook changes
+  // Enhanced fallback function
+  const getFallbackNetworkInfo = (chainId: number): NetworkInfo => {
+    const fallbacks: Record<number, NetworkInfo> = {
+      1: {
+        name: 'Ethereum',
+        symbol: 'ETH',
+        color: '#627EEA',
+        explorerUrl: 'https://etherscan.io',
+        decimals: 18
+      },
+      56: {
+        name: 'BNB Smart Chain',
+        symbol: 'BNB',
+        color: '#F3BA2F',
+        explorerUrl: 'https://bscscan.com',
+        decimals: 18
+      },
+      137: {
+        name: 'Polygon',
+        symbol: 'MATIC',
+        color: '#8247E5',
+        explorerUrl: 'https://polygonscan.com',
+        decimals: 18
+      },
+      43114: {
+        name: 'Avalanche',
+        symbol: 'AVAX',
+        color: '#E84142',
+        explorerUrl: 'https://snowscan.xyz',
+        decimals: 18
+      },
+      42161: {
+        name: 'Arbitrum One',
+        symbol: 'ETH',
+        color: '#28A0F0',
+        explorerUrl: 'https://arbiscan.io',
+        decimals: 18
+      },
+      10: {
+        name: 'Optimism',
+        symbol: 'ETH',
+        color: '#FF0420',
+        explorerUrl: 'https://optimistic.etherscan.io',
+        decimals: 18
+      },
+      8453: {
+        name: 'Base',
+        symbol: 'ETH',
+        color: '#0052FF',
+        explorerUrl: 'https://basescan.org',
+        decimals: 18
+      },
+      250: {
+        name: 'Fantom',
+        symbol: 'FTM',
+        color: '#1969FF',
+        explorerUrl: 'https://ftmscan.com',
+        decimals: 18
+      }
+    };
+
+    return fallbacks[chainId] || {
+      name: `Chain ${chainId}`,
+      symbol: 'ETH',
+      color: '#666666',
+      explorerUrl: null,
+      decimals: 18
+    };
+  };
+
+  // Force refresh wagmi hooks when chainId changes
   useEffect(() => {
     console.log("SendTransactionModal: chainId changed to", chainId, "- refreshing wagmi hooks");
     
-    // Force refresh all wagmi hooks when our enhanced chainId changes
-    if (refetchBalance) {
-      console.log("SendTransactionModal: Refetching balance for chain", chainId);
-      refetchBalance().catch(console.warn);
-    }
-    if (refetchGasEstimate) {
-      console.log("SendTransactionModal: Refetching gas estimate for chain", chainId);
-      refetchGasEstimate().catch(console.warn);
-    }
-    if (refetchGasPrice) {
-      console.log("SendTransactionModal: Refetching gas price for chain", chainId);
-      refetchGasPrice().catch(console.warn);
-    }
-  }, [chainId, refetchBalance, refetchGasEstimate, refetchGasPrice]);
+    // Small delay to allow for chain switch to complete
+    const refreshTimer = setTimeout(() => {
+      if (refetchBalance) {
+        console.log("SendTransactionModal: Refetching balance for chain", chainId);
+        refetchBalance().catch(error => {
+          console.warn("Balance refetch failed:", error?.message);
+        });
+      }
+      if (refetchGasPrice) {
+        console.log("SendTransactionModal: Refetching gas price for chain", chainId);
+        refetchGasPrice().catch(error => {
+          console.warn("Gas price refetch failed:", error?.message);
+        });
+      }
+    }, 500);
 
-  // Listen for network changes and force refresh ALL wagmi hooks
+    return () => clearTimeout(refreshTimer);
+  }, [chainId, refetchBalance, refetchGasPrice]);
+
+  // Listen for network changes and force refresh
   useEffect(() => {
     const handleChainChanged = (newChainId: string) => {
       const newChainIdNumber = parseInt(newChainId, 16);
@@ -243,66 +318,32 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       // Force refresh network info immediately
       setNetworkLoading(true);
       
-      // Force refresh ALL wagmi hooks data
-      console.log("SendTransactionModal: Refreshing all wagmi hooks for new chain");
-      
-      // Refresh balance, gas estimate, and gas price
-      if (refetchBalance) {
-        refetchBalance().catch(console.warn);
-      }
-      if (refetchGasEstimate) {
-        refetchGasEstimate().catch(console.warn);
-      }
-      if (refetchGasPrice) {
-        refetchGasPrice().catch(console.warn);
-      }
-      
-      // Clear any cached data for immediate refresh
-      getNetworkInfo(newChainIdNumber).then(info => {
-        console.log("SendTransactionModal: Network info refreshed after chain change:", info);
-        setNetworkInfo(info);
-        setNetworkLoading(false);
-      }).catch(error => {
-        console.error("SendTransactionModal: Failed to refresh network info after chain change:", error);
+      // Delay the wagmi hook refresh to allow chain switch to complete
+      setTimeout(() => {
+        console.log("SendTransactionModal: Refreshing wagmi hooks after chain change");
         
-        // Enhanced fallback for known chains
-        let fallbackInfo: NetworkInfo = {
-          name: `Chain ${newChainIdNumber}`,
-          symbol: 'ETH',
-          color: '#666666',
-          explorerUrl: null,
-          decimals: 18
-        };
-
-        if (newChainIdNumber === 43114) {
-          fallbackInfo = {
-            name: 'Avalanche',
-            symbol: 'AVAX',
-            color: '#E84142',
-            explorerUrl: 'https://snowscan.xyz',
-            decimals: 18
-          };
-        } else if (newChainIdNumber === 56) {
-          fallbackInfo = {
-            name: 'BNB Smart Chain',
-            symbol: 'BNB',
-            color: '#F3BA2F',
-            explorerUrl: 'https://bscscan.com',
-            decimals: 18
-          };
-        } else if (newChainIdNumber === 137) {
-          fallbackInfo = {
-            name: 'Polygon',
-            symbol: 'MATIC',
-            color: '#8247E5',
-            explorerUrl: 'https://polygonscan.com',
-            decimals: 18
-          };
+        if (refetchBalance) {
+          refetchBalance().catch(console.warn);
+        }
+        if (refetchGasEstimate) {
+          refetchGasEstimate().catch(console.warn);
+        }
+        if (refetchGasPrice) {
+          refetchGasPrice().catch(console.warn);
         }
         
-        setNetworkInfo(fallbackInfo);
-        setNetworkLoading(false);
-      });
+        // Load network info for new chain
+        getNetworkInfo(newChainIdNumber).then(info => {
+          console.log("SendTransactionModal: Network info refreshed after chain change:", info);
+          setNetworkInfo(info);
+          setNetworkLoading(false);
+        }).catch(error => {
+          console.error("SendTransactionModal: Failed to refresh network info after chain change:", error);
+          const fallbackInfo = getFallbackNetworkInfo(newChainIdNumber);
+          setNetworkInfo(fallbackInfo);
+          setNetworkLoading(false);
+        });
+      }, 1000);
     };
 
     if (typeof window !== 'undefined' && window.ethereum) {
@@ -320,9 +361,11 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     setStep('form');
     setError(null);
     
-    // Try to refetch balance when modal opens
+    // Initial balance fetch
     if (refetchBalance) {
-      refetchBalance();
+      refetchBalance().catch(error => {
+        console.warn("Initial balance fetch failed:", error?.message);
+      });
     }
   }, [resetSendTransaction, refetchBalance]);
 
@@ -341,13 +384,12 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       setStep('confirming');
       setError(null);
       
-      // Set a timeout for confirming state (in case user never confirms/rejects)
       const timeout = setTimeout(() => {
         if (step === 'confirming') {
           setError('Transaction confirmation timed out. Please try again.');
           setStep('error');
         }
-      }, 60000) as number; // 60 seconds
+      }, 60000) as number;
       
       setTimeoutId(timeout);
     }
@@ -355,7 +397,6 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
   useEffect(() => {
     if (hash) {
-      // Clear the confirming timeout since we have a hash
       if (timeoutId) {
         clearTimeout(timeoutId);
         setTimeoutId(null);
@@ -371,7 +412,6 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     if (isConfirmed && hash) {
       setStep('success');
       
-      // Create transaction data for chat integration
       const transactionData: TransactionData = {
         hash,
         to: recipientAddress,
@@ -391,7 +431,6 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
         onTransactionSent(transactionData);
       }
 
-      // Auto-close after success
       setTimeout(() => {
         onClose();
       }, 3000);
@@ -403,7 +442,6 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       setStep('error');
       const errorMessage = sendError?.message || confirmError?.message || 'Transaction failed';
       
-      // Parse common error messages
       if (errorMessage.includes('insufficient funds')) {
         setError('Insufficient funds for this transaction');
       } else if (errorMessage.includes('user rejected') || errorMessage.includes('User denied')) {
@@ -413,11 +451,9 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       } else if (errorMessage.includes('network')) {
         setError('Network error. Please check your connection and try again.');
       } else {
-        // Simplify complex error messages
         setError('Transaction failed. Please try again.');
       }
       
-      // Clear any pending timeouts
       if (timeoutId) {
         clearTimeout(timeoutId);
         setTimeoutId(null);
@@ -426,7 +462,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
   }, [sendError, isConfirmError, confirmError, timeoutId]);
 
   const canSubmit = () => {
-    return isValidAmount() && isValidAddress() && !isSending && !balanceLoading && balance && !networkLoading;
+    return isValidAmount() && isValidAddress() && !isSending && !balanceLoading && !balanceRefetching && !networkLoading;
   };
 
   // Handle form submission
@@ -459,57 +495,76 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     setAmount(quickAmount);
   };
 
-  // Handle max amount with proper gas calculation + safety buffer (MetaMask approach)
+  // Enhanced max amount calculation
   const handleMaxAmount = async () => {
-    if (!balance || !address || !publicClient) return;
+    if (!balance || !address || !publicClient) {
+      console.warn("Missing requirements for max calculation:", { balance: !!balance, address: !!address, publicClient: !!publicClient });
+      return;
+    }
     
     const balanceValue = parseFloat(balance.formatted);
+    
+    if (balanceValue <= 0) {
+      alert(`No balance available on ${networkInfo.name}.\n\nCurrent balance: ${balanceValue} ${networkInfo.symbol}`);
+      return;
+    }
 
     try {
-      // Step 1: Get current gas price
       const currentGasPrice = gasPrice;
       if (!currentGasPrice) {
-        alert('Unable to fetch gas price. Please try again in a moment.');
+        // Use fallback for max calculation
+        const fallbackGasFee = 0.001; // Conservative estimate
+        const maxSendableAmount = Math.max(0, balanceValue - fallbackGasFee);
+        
+        if (maxSendableAmount <= 0) {
+          alert(`Insufficient balance for transaction.\n\nBalance: ${balanceValue} ${networkInfo.symbol}\nEstimated gas fee: ${fallbackGasFee} ${networkInfo.symbol}`);
+          return;
+        }
+        
+        const finalAmount = Math.min(maxSendableAmount, balanceValue * 0.95);
+        const precision = finalAmount < 0.01 ? 8 : 6;
+        setAmount(finalAmount.toFixed(precision));
         return;
       }
 
-      // Step 2: Estimate gas for a small transaction
-      // Use a very small amount or 1% of balance, whichever is smaller
+      // Estimate gas for a small transaction
       const testAmountValue = Math.min(0.0001, balanceValue * 0.01);
       const testAmount = parseEther(testAmountValue.toString());
       
-      const gasEstimate = await publicClient.estimateGas({
-        account: address,
-        to: recipientAddress as `0x${string}`,
-        value: testAmount,
-      });
+      let gasEstimate: bigint;
+      try {
+        gasEstimate = await publicClient.estimateGas({
+          account: address,
+          to: recipientAddress as `0x${string}`,
+          value: testAmount,
+        });
+      } catch (gasError) {
+        console.warn("Gas estimation failed, using fallback:", gasError);
+        // Use fallback gas estimate
+        gasEstimate = BigInt(21000); // Standard transfer gas
+      }
 
-      // Step 3: Apply MetaMask-style safety buffer  
-      // GitHub issue shows MetaMask uses 1.5x the estimate (50% increase)
-      const gasWithBuffer = gasEstimate * BigInt(150) / BigInt(100); // 50% increase (1.5x)
+      // Apply safety buffer
+      const gasWithBuffer = gasEstimate * BigInt(150) / BigInt(100);
       
-      // Step 4: Calculate transaction fee with buffer
+      // Calculate transaction fee
       const txFee = gasWithBuffer * currentGasPrice;
       const txFeeInEther = formatEther(txFee);
       const txFeeValue = parseFloat(txFeeInEther);
 
-      // Step 5: Calculate max sendable amount
+      // Calculate max sendable amount
       const maxSendableAmount = balanceValue - txFeeValue;
 
-      // Check if there's enough left after gas
       if (maxSendableAmount <= 0) {
-        alert(`Insufficient balance for transaction.\n\nBalance: ${balanceValue} ${networkInfo.symbol}\nEstimated gas fee (with buffer): ${txFeeValue.toFixed(8)} ${networkInfo.symbol}\n\nYou need more ${networkInfo.symbol} to cover gas fees.`);
+        alert(`Insufficient balance for transaction.\n\nBalance: ${balanceValue} ${networkInfo.symbol}\nEstimated gas fee: ${txFeeValue.toFixed(8)} ${networkInfo.symbol}\n\nYou need more ${networkInfo.symbol} to cover gas fees.`);
         return;
       }
 
-      // Additional safety check: ensure result doesn't exceed balance
-      const finalAmount = Math.min(maxSendableAmount, balanceValue * 0.99); // Never use more than 99% of balance
-
-      // Use higher precision for small amounts
+      const finalAmount = Math.min(maxSendableAmount, balanceValue * 0.99);
       const precision = finalAmount < 0.01 ? 8 : 6;
       setAmount(finalAmount.toFixed(precision));
 
-      console.log('Max calculation with MetaMask 1.5x approach:', {
+      console.log('Max calculation completed:', {
         balance: balanceValue,
         gasEstimate: gasEstimate.toString(),
         gasWithBuffer: gasWithBuffer.toString(),
@@ -521,14 +576,19 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
 
     } catch (error) {
       console.error('Error calculating max amount:', error);
-      alert('Unable to calculate max amount. Please enter amount manually.');
+      // Use simple fallback
+      const fallbackAmount = balanceValue * 0.95; // Use 95% of balance as safe fallback
+      const precision = fallbackAmount < 0.01 ? 8 : 6;
+      setAmount(fallbackAmount.toFixed(precision));
     }
   };
 
   // Retry balance fetch
   const retryBalance = () => {
     if (refetchBalance) {
-      refetchBalance();
+      refetchBalance().catch(error => {
+        console.warn("Balance retry failed:", error?.message);
+      });
     }
   };
 
@@ -538,7 +598,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
     return `${networkInfo.explorerUrl}/tx/${hash}`;
   };
 
-  // Handle close with confirmation if transaction is in progress
+  // Handle close with confirmation
   const handleClose = () => {
     if (step === 'confirming') {
       const shouldClose = window.confirm(
@@ -554,12 +614,61 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
       if (!shouldClose) return;
     }
     
-    // Clear any timeouts
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
     
     onClose();
+  };
+
+  // Enhanced balance display with error handling
+  const renderBalanceInfo = () => {
+    if (balanceLoading || balanceRefetching) {
+      return <span>Loading balance...</span>;
+    }
+    
+    if (balanceError) {
+      console.warn("Balance error:", balanceError.message);
+      // Check if it's an unsupported network error
+      if (balanceError.message?.includes('unsupported') || 
+          balanceError.message?.includes('chain')) {
+        return (
+          <span style={{ color: '#ffc107' }}>
+            Unsupported network - Please switch to a supported chain
+          </span>
+        );
+      }
+      return (
+        <span style={{ color: '#ff4444' }}>
+          Failed to load balance
+          <button 
+            onClick={retryBalance}
+            style={{ 
+              marginLeft: '8px', 
+              background: '#50b458', 
+              border: 'none', 
+              color: 'white', 
+              padding: '2px 6px', 
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '10px'
+            }}
+          >
+            Retry
+          </button>
+        </span>
+      );
+    }
+    
+    if (balance) {
+      return (
+        <span>
+          Balance: {parseFloat(balance.formatted).toFixed(6)} {balance.symbol}
+        </span>
+      );
+    }
+    
+    return <span>Balance: 0.000000 {networkInfo.symbol}</span>;
   };
 
   // Render different steps
@@ -582,24 +691,12 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                 </div>
               )}
 
-              {/* Balance Error */}
-              {balanceError && (
+              {/* Network Status */}
+              {(balanceError?.message?.includes('unsupported') || 
+                gasError?.message?.includes('unsupported') ||
+                gasPriceError?.message?.includes('unsupported')) && (
                 <div className="error-message">
-                  Failed to load balance. 
-                  <button 
-                    onClick={retryBalance}
-                    style={{ 
-                      marginLeft: '10px', 
-                      background: '#50b458', 
-                      border: 'none', 
-                      color: 'white', 
-                      padding: '4px 8px', 
-                      borderRadius: '4px',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Retry
-                  </button>
+                  This network may not be fully supported. Some features may not work correctly.
                 </div>
               )}
 
@@ -632,28 +729,20 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                       type="button"
                       className="quick-amount-btn"
                       onClick={handleMaxAmount}
-                      disabled={!balance}
+                      disabled={!balance || !!balanceError || balanceLoading}
                     >
                       Max
                     </button>
                   </div>
                 </div>
                 <div className="balance-info">
-                  {balanceLoading ? (
-                    <span>Loading balance...</span>
-                  ) : balance ? (
-                    <span>
-                      Balance: {parseFloat(balance.formatted).toFixed(6)} {balance.symbol}
-                    </span>
-                  ) : (
-                    <span>Balance unavailable</span>
-                  )}
+                  {renderBalanceInfo()}
                 </div>
                 {amount && !isValidAmount() && (
                   <span className="error-text">
                     {parseFloat(amount) <= 0 
                       ? 'Amount must be greater than 0' 
-                      : totalCost && parseFloat(totalCost) > parseFloat(balance?.formatted || '0')
+                      : totalCost && balance && parseFloat(totalCost) > parseFloat(balance.formatted)
                         ? 'Insufficient balance (including gas fees)'
                         : 'Insufficient balance'
                     }
@@ -701,7 +790,7 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                     <span>Amount to send:</span>
                     <span>{amount} {networkLoading ? 'Loading...' : networkInfo.symbol}</span>
                   </div>
-                  {estimatedGasFee && (
+                  {estimatedGasFee && !gasError && (
                     <div className="summary-row">
                       <span>Estimated gas fee:</span>
                       <span className="gas-fee">
@@ -715,7 +804,15 @@ const SendTransactionModal: React.FC<SendTransactionModalProps> = ({
                       <span className="gas-loading">⏳</span>
                     </div>
                   )}
-                  {totalCost && (
+                  {gasError && (
+                    <div className="summary-row">
+                      <span>Gas estimation:</span>
+                      <span className="gas-fee" style={{ color: '#ffc107' }}>
+                        Unable to estimate
+                      </span>
+                    </div>
+                  )}
+                  {totalCost && !gasError && (
                     <div className="summary-row total">
                       <span><strong>Total cost:</strong></span>
                       <span><strong>{parseFloat(totalCost).toFixed(6)} {networkLoading ? 'Loading...' : networkInfo.symbol}</strong></span>
